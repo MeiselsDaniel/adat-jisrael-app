@@ -8,7 +8,7 @@ const pageTitles: Record<Page, string> = {
   home: 'Hem',
   calendar: 'Kalender',
   kiddush: 'Kiddush',
-  profile: 'Min profil',
+  more: 'Mer',
 }
 
 function Header({ page }: HeaderProps) {

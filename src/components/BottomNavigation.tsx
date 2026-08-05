@@ -1,7 +1,7 @@
 import {
   CalendarDays,
   Home,
-  User,
+  Menu,
   Wine,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -40,10 +40,10 @@ function BottomNavigation({
       />
 
       <NavButton
-        active={page === 'profile'}
-        label="Profil"
-        icon={<User className="h-5 w-5" />}
-        onClick={() => setPage('profile')}
+        active={page === 'more'}
+        label="Mer"
+        icon={<Menu className="h-5 w-5" />}
+        onClick={() => setPage('more')}
       />
     </nav>
   )
