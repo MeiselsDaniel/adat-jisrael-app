@@ -1,4 +1,10 @@
-export type Page = 'home' | 'calendar' | 'kiddush' | 'more'
+export type Page =
+  | 'home'
+  | 'calendar'
+  | 'information'
+  | 'kiddush'
+  | 'membership'
+  | 'more'
 
 export type UserRole = 'user' | 'admin' | 'superadmin'
 
@@ -32,11 +38,6 @@ export type AppUser = {
   permissions: Permissions
 }
 
-/*
- * Den gemensamma händelsemodellen.
- * Tfilot, Jahrzeit, aktiviteter och högtider använder samma struktur.
- */
-
 export type EventType =
   | 'tefila'
   | 'jahrzeit'
@@ -66,7 +67,6 @@ export type RecurrenceType =
 
 export type AppEvent = {
   id: string
-
   type: EventType
   title: string
   description?: string
@@ -74,7 +74,6 @@ export type AppEvent = {
   startDate: string
   startTime: string
   endTime?: string
-
   location?: string
 
   visibility: EventVisibility
@@ -93,24 +92,14 @@ export type AppEvent = {
   createdAt: string
   createdBy: string
 
-  /*
-   * Används främst för Jahrzeit.
-   */
   memorialName?: string
   memorialHebrewName?: string
   showMemorialName?: boolean
   kaddishWillBeSaid?: boolean
 
-  /*
-   * Används främst för Kiddush.
-   */
   kiddushHost?: string
   kiddushDedication?: string
 }
-
-/*
- * Anmälan till en händelse.
- */
 
 export type EventRegistration = {
   id: string
@@ -118,10 +107,6 @@ export type EventRegistration = {
   userId: string
   registeredAt: string
 }
-
-/*
- * Informationsinlägg och medlemsnyheter.
- */
 
 export type InformationStatus =
   | 'draft'
@@ -152,10 +137,6 @@ export type InformationPost = {
   createdBy: string
 }
 
-/*
- * Ansökan om medlemskap.
- */
-
 export type MembershipApplicationStatus =
   | 'pending'
   | 'approved'
@@ -178,11 +159,6 @@ export type MembershipApplication = {
   reviewedAt?: string
   reviewedBy?: string
 }
-
-/*
- * Äldre datatyper som den nuvarande prototypen fortfarande använder.
- * Vi behåller dem tills sidorna har flyttats över till AppEvent.
- */
 
 export type Tefila = {
   id: number

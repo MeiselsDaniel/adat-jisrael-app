@@ -7,7 +7,9 @@ type HeaderProps = {
 const pageTitles: Record<Page, string> = {
   home: 'Hem',
   calendar: 'Kalender',
+  information: 'Information',
   kiddush: 'Kiddush',
+  membership: 'Medlemskap',
   more: 'Mer',
 }
 

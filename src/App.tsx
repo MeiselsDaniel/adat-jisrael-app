@@ -8,14 +8,23 @@ import {
 import AdminPage from './pages/AdminPage'
 import CalendarPage from './pages/CalendarPage'
 import HomePage from './pages/HomePage'
+import InformationPage from './pages/InformationPage'
 import KiddushPage from './pages/KiddushPage'
 import LoginPage from './pages/LoginPage'
+import MembershipPage from './pages/MembershipPage'
 import MorePage from './pages/MorePage'
+import NewEventPage from './pages/NewEventPage'
 import PendingApprovalPage from './pages/PendingApprovalPage'
-import type { AppUser, Page } from './types'
+import type {
+  AppEvent,
+  AppUser,
+  Page,
+} from './types'
 
 function getInitialUser(): AppUser | null {
-  const storedUser = localStorage.getItem('adat-current-user')
+  const storedUser = localStorage.getItem(
+    'adat-current-user',
+  )
 
   if (!storedUser) {
     return null
@@ -29,16 +38,22 @@ function getInitialUser(): AppUser | null {
   }
 }
 
+type AdminView = 'dashboard' | 'newEvent'
+
 function App() {
   const [currentUser, setCurrentUser] =
     useState<AppUser | null>(getInitialUser)
 
   const [page, setPage] = useState<Page>('home')
   const [adminOpen, setAdminOpen] = useState(false)
+  const [adminView, setAdminView] =
+    useState<AdminView>('dashboard')
 
   const [registrations, setRegistrations] = useState<
     Record<number, boolean>
   >({})
+
+  const [, setCreatedEvents] = useState<AppEvent[]>([])
 
   function saveCurrentUser(user: AppUser) {
     localStorage.setItem(
@@ -52,7 +67,8 @@ function App() {
   function login(email: string): AppUser | null {
     const user = demoUsers.find(
       (item) =>
-        item.email.toLowerCase() === email.toLowerCase(),
+        item.email.toLowerCase() ===
+        email.toLowerCase(),
     )
 
     if (!user) {
@@ -63,7 +79,10 @@ function App() {
     return user
   }
 
-  function register(name: string, email: string): AppUser {
+  function register(
+    name: string,
+    email: string,
+  ): AppUser {
     const newUser: AppUser = {
       id: crypto.randomUUID(),
       name,
@@ -83,10 +102,13 @@ function App() {
     setCurrentUser(null)
     setPage('home')
     setAdminOpen(false)
+    setAdminView('dashboard')
   }
 
   function toggleRegistration(tefilaId: number) {
-    if (!currentUser?.permissions.registerForTfilot) {
+    if (
+      !currentUser?.permissions.registerForTfilot
+    ) {
       return
     }
 
@@ -94,6 +116,23 @@ function App() {
       ...current,
       [tefilaId]: !current[tefilaId],
     }))
+  }
+
+  function openAdmin() {
+    setAdminView('dashboard')
+    setAdminOpen(true)
+  }
+
+  function closeAdmin() {
+    setAdminView('dashboard')
+    setAdminOpen(false)
+  }
+
+  function saveNewEvent(event: AppEvent) {
+    setCreatedEvents((current) => [
+      event,
+      ...current,
+    ])
   }
 
   if (!currentUser) {
@@ -128,6 +167,7 @@ function App() {
           </p>
 
           <button
+            type="button"
             onClick={logout}
             className="mt-6 rounded-2xl bg-slate-100 px-5 py-3 font-bold"
           >
@@ -142,13 +182,34 @@ function App() {
     return (
       <div className="min-h-screen bg-slate-100 text-slate-900">
         <div className="mx-auto min-h-screen w-full max-w-md bg-[#f8fafc] px-4 py-5 shadow-xl">
-          <AdminPage
-            onBack={() => setAdminOpen(false)}
-          />
+          {adminView === 'dashboard' && (
+            <AdminPage
+              onBack={closeAdmin}
+              onCreateEvent={() =>
+                setAdminView('newEvent')
+              }
+            />
+          )}
+
+          {adminView === 'newEvent' && (
+            <NewEventPage
+              currentUserId={currentUser.id}
+              onBack={() =>
+                setAdminView('dashboard')
+              }
+              onSave={saveNewEvent}
+            />
+          )}
         </div>
       </div>
     )
   }
+
+  const canAccessMemberInformation =
+    currentUser.permissions.viewMemberInformation
+
+  const canAccessKiddush =
+    currentUser.permissions.bookKiddush
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -159,26 +220,54 @@ function App() {
           {page === 'home' && (
             <HomePage
               registrations={registrations}
-              toggleRegistration={toggleRegistration}
-              openCalendar={() => setPage('calendar')}
-              openKiddush={() => setPage('kiddush')}
+              toggleRegistration={
+                toggleRegistration
+              }
+              showMemberInformation={
+                canAccessMemberInformation
+              }
+              openInformation={() =>
+                setPage('information')
+              }
             />
           )}
 
-          {page === 'calendar' && <CalendarPage />}
+          {page === 'calendar' && (
+            <CalendarPage />
+          )}
+
+          {page === 'information' &&
+            (canAccessMemberInformation ? (
+              <InformationPage user={currentUser} />
+            ) : (
+              <MembershipPage
+                userName={currentUser.name}
+                userEmail={currentUser.email}
+              />
+            ))}
 
           {page === 'kiddush' &&
-            (currentUser.permissions.bookKiddush ? (
+            (canAccessKiddush ? (
               <KiddushPage />
             ) : (
-              <AccessDenied text="Kiddushbokningen är tillgänglig för medlemmar." />
+              <MembershipPage
+                userName={currentUser.name}
+                userEmail={currentUser.email}
+              />
             ))}
+
+          {page === 'membership' && (
+            <MembershipPage
+              userName={currentUser.name}
+              userEmail={currentUser.email}
+            />
+          )}
 
           {page === 'more' && (
             <MorePage
               user={currentUser}
               onLogout={logout}
-              openAdmin={() => setAdminOpen(true)}
+              openAdmin={openAdmin}
             />
           )}
         </main>
@@ -186,26 +275,9 @@ function App() {
         <BottomNavigation
           page={page}
           setPage={setPage}
+          user={currentUser}
         />
       </div>
-    </div>
-  )
-}
-
-type AccessDeniedProps = {
-  text: string
-}
-
-function AccessDenied({ text }: AccessDeniedProps) {
-  return (
-    <div className="rounded-3xl bg-white p-7 text-center shadow-sm ring-1 ring-slate-200">
-      <h2 className="text-xl font-bold text-[#183b70]">
-        Begränsad åtkomst
-      </h2>
-
-      <p className="mt-3 leading-7 text-slate-500">
-        {text}
-      </p>
     </div>
   )
 }
