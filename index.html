@@ -1,114 +1,13 @@
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Adat Jisrael – Morgonminjan</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f5f7fb;
-      color: #1f2937;
-    }
-    .container {
-      max-width: 420px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      background: #0b1f3a;
-      color: white;
-      padding: 24px;
-      border-radius: 18px;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 18px;
-      margin-bottom: 14px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-    }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .status-green { color: #15803d; font-weight: bold; }
-    .status-yellow { color: #b45309; font-weight: bold; }
-    .status-red { color: #b91c1c; font-weight: bold; }
-    button {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 12px;
-      background: #0b1f3a;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 12px;
-    }
-    button:hover { opacity: 0.95; }
-    .small {
-      color: #6b7280;
-      font-size: 14px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>✡ Adat Jisrael</h1>
-      <p>Morgonminjan</p>
-    </div>
-
-    <div class="card">
-      <div class="row">
-        <div>
-          <strong>Onsdag 5 aug</strong><br>
-          <span class="small">07:00</span>
-        </div>
-        <div class="status-green">10/10 ✅</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="row">
-        <div>
-          <strong>Torsdag 6 aug</strong><br>
-          <span class="small">07:00</span>
-        </div>
-        <div class="status-yellow">8/10 ⚠️</div>
-      </div>
-      <button onclick="alert('Du är nu anmäld till torsdagens shacharit!')">
-        Jag kommer
-      </button>
-    </div>
-
-    <div class="card">
-      <div class="row">
-        <div>
-          <strong>Fredag 7 aug</strong><br>
-          <span class="small">06:45</span>
-        </div>
-        <div class="status-green">12/10 ✅</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="row">
-        <div>
-          <strong>Söndag 9 aug</strong><br>
-          <span class="small">08:30</span>
-        </div>
-        <div class="status-red">6/10 ❌</div>
-      </div>
-      <button onclick="alert('Du är nu anmäld till söndagens shacharit!')">
-        Jag kommer
-      </button>
-    </div>
-  </div>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>adat-jisrael-app</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
