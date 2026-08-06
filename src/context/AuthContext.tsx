@@ -4,10 +4,9 @@ import {
   useMemo,
   useState,
 } from 'react'
-import type {
-  ReactNode,
-} from 'react'
+import type { ReactNode } from 'react'
 import {
+  deleteUser,
   onAuthStateChanged,
   type User,
 } from 'firebase/auth'
@@ -17,19 +16,38 @@ import {
   logoutUser,
   registerUser,
 } from '../firebase/auth'
+import {
+  createUserProfile,
+  getUserProfile,
+  type FirebaseUserProfile,
+} from '../firebase/users'
+
+export type RegisterAccountInput = {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+  phone?: string
+}
 
 type AuthContextValue = {
   firebaseUser: User | null
+  profile: FirebaseUserProfile | null
   loading: boolean
+  profileLoading: boolean
+  authError: string | null
+
   login: (
     email: string,
     password: string,
   ) => Promise<void>
+
   register: (
-    email: string,
-    password: string,
-  ) => Promise<User>
+    input: RegisterAccountInput,
+  ) => Promise<void>
+
   logout: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 export const AuthContext =
@@ -45,18 +63,65 @@ export function AuthProvider({
   const [firebaseUser, setFirebaseUser] =
     useState<User | null>(null)
 
+  const [profile, setProfile] =
+    useState<FirebaseUserProfile | null>(null)
+
   const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] =
+    useState(false)
+
+  const [authError, setAuthError] =
+    useState<string | null>(null)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
-      (user) => {
+      async (user) => {
         setFirebaseUser(user)
-        setLoading(false)
+        setAuthError(null)
+
+        if (!user) {
+          setProfile(null)
+          setProfileLoading(false)
+          setLoading(false)
+          return
+        }
+
+        setProfileLoading(true)
+
+        try {
+          const storedProfile =
+            await getUserProfile(user.uid)
+
+          setProfile(storedProfile)
+        } catch (error) {
+          console.error(
+            'Kunde inte läsa användarprofilen:',
+            error,
+          )
+
+          setProfile(null)
+          setAuthError(
+            'Kunde inte läsa din användarprofil.',
+          )
+        } finally {
+          setProfileLoading(false)
+          setLoading(false)
+        }
       },
-      () => {
+      (error) => {
+        console.error(
+          'Firebase Authentication-fel:',
+          error,
+        )
+
         setFirebaseUser(null)
+        setProfile(null)
+        setProfileLoading(false)
         setLoading(false)
+        setAuthError(
+          'Kunde inte kontrollera inloggningen.',
+        )
       },
     )
 
@@ -67,34 +132,110 @@ export function AuthProvider({
     email: string,
     password: string,
   ) {
-    await loginUser(email, password)
+    setAuthError(null)
+
+    await loginUser(
+      email.trim().toLowerCase(),
+      password,
+    )
   }
 
-  async function register(
-    email: string,
-    password: string,
-  ) {
+  async function register({
+    firstName,
+    lastName,
+    email,
+    password,
+    phone,
+  }: RegisterAccountInput) {
+    setAuthError(null)
+
+    const normalizedEmail =
+      email.trim().toLowerCase()
+
     const credential = await registerUser(
-      email,
+      normalizedEmail,
       password,
     )
 
-    return credential.user
+    try {
+      await createUserProfile({
+        uid: credential.user.uid,
+        firstName,
+        lastName,
+        email: normalizedEmail,
+        phone,
+      })
+
+      const createdProfile =
+        await getUserProfile(
+          credential.user.uid,
+        )
+
+      setProfile(createdProfile)
+    } catch (error) {
+      /*
+       * Om Firestore-skrivningen misslyckas tar vi bort
+       * det nyss skapade Authentication-kontot.
+       * Då lämnas inget konto utan användarprofil.
+       */
+      try {
+        await deleteUser(credential.user)
+      } catch (deleteError) {
+        console.error(
+          'Kunde inte återställa det skapade kontot:',
+          deleteError,
+        )
+      }
+
+      throw error
+    }
   }
 
   async function logout() {
+    setAuthError(null)
     await logoutUser()
+    setProfile(null)
+  }
+
+  async function refreshProfile() {
+    if (!firebaseUser) {
+      setProfile(null)
+      return
+    }
+
+    setProfileLoading(true)
+
+    try {
+      const updatedProfile =
+        await getUserProfile(
+          firebaseUser.uid,
+        )
+
+      setProfile(updatedProfile)
+    } finally {
+      setProfileLoading(false)
+    }
   }
 
   const value = useMemo<AuthContextValue>(
     () => ({
       firebaseUser,
+      profile,
       loading,
+      profileLoading,
+      authError,
       login,
       register,
       logout,
+      refreshProfile,
     }),
-    [firebaseUser, loading],
+    [
+      firebaseUser,
+      profile,
+      loading,
+      profileLoading,
+      authError,
+    ],
   )
 
   return (

@@ -6,7 +6,10 @@ export type Page =
   | 'membership'
   | 'more'
 
-export type UserRole = 'user' | 'admin' | 'superadmin'
+export type UserRole =
+  | 'user'
+  | 'admin'
+  | 'superadmin'
 
 export type UserCategory =
   | 'member'
@@ -16,7 +19,10 @@ export type UserCategory =
   | 'rabbi'
   | 'board'
 
-export type UserStatus = 'pending' | 'approved' | 'blocked'
+export type UserStatus =
+  | 'pending'
+  | 'approved'
+  | 'blocked'
 
 export type Permissions = {
   registerForTfilot: boolean
@@ -161,12 +167,33 @@ export type MembershipApplication = {
 }
 
 export type Tefila = {
-  id: number
+  /*
+   * Tillfällig kompatibilitet med äldre testdata.
+   * Nya automatiskt genererade tfilot använder sträng-ID.
+   */
+  id: string | number
+
+  /*
+   * Stabilt dokument-ID för Firestore.
+   * Exempel: 2026-08-07-shacharit
+   */
+  firestoreId?: string
+
+  /*
+   * Maskinläsbart datum i formatet YYYY-MM-DD.
+   */
+  dateValue?: string
+
   day: string
   date: string
   title: string
   time: string
-  attending: number
+
+  /*
+   * Äldre testvärde. Riktigt antal hämtas numera
+   * från Firestore-registreringarna.
+   */
+  attending?: number
 }
 
 export type CalendarEvent = {
@@ -176,7 +203,11 @@ export type CalendarEvent = {
   weekday: string
   title: string
   time: string
-  category: 'Tefila' | 'Aktivitet' | 'Högtid' | 'Kiddush'
+  category:
+    | 'Tefila'
+    | 'Aktivitet'
+    | 'Högtid'
+    | 'Kiddush'
   membersOnly?: boolean
 }
 

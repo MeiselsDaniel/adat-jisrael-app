@@ -10,35 +10,58 @@ import {
   Utensils,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
-import MinyanCard from '../components/MinyanCard'
+import LiveMinyanCard from '../components/LiveMinyanCard'
 import { informationPosts } from '../data/events'
-import { upcomingTfilot } from '../data/sampleData'
 import { synagogueSettings } from '../data/settings'
 import {
   todayProgram,
   type ProgramItem,
 } from '../data/todayProgram'
 import type { Tefila } from '../types'
+import { generateStandardTfilot } from '../utils/generateStandardTfilot'
 
 type HomePageProps = {
-  registrations: Record<number, boolean>
-  toggleRegistration: (tefilaId: number) => void
   showMemberInformation: boolean
   openInformation: () => void
 }
 
-const sundayTefila: Tefila = {
-  id: 7,
-  day: 'Söndag',
-  date: '16 augusti',
-  title: 'Shacharit',
-  time: synagogueSettings.schedule.sundayShacharit,
-  attending: 9,
+const upcomingTfilot = generateStandardTfilot()
+
+const nextFriday = findNextWeekday(new Date(), 5)
+const nextSaturday = addDays(nextFriday, 1)
+
+const fridayDateValue = formatDateValue(nextFriday)
+const saturdayDateValue = formatDateValue(nextSaturday)
+
+const scheduleWithKabbalat =
+  synagogueSettings.schedule as typeof synagogueSettings.schedule & {
+    kabbalatShabbat?: string
+  }
+
+const kabbalatShabbat: Tefila = {
+  id: `${fridayDateValue}-kabbalat-shabbat`,
+  firestoreId: `${fridayDateValue}-kabbalat-shabbat`,
+  dateValue: fridayDateValue,
+  day: 'Fredag',
+  date: formatSwedishDate(nextFriday),
+  title: 'Kabbalat Shabbat',
+  time: scheduleWithKabbalat.kabbalatShabbat ?? '19.30',
+  attending: 0,
 }
 
+const tfilotBeforeShabbat = upcomingTfilot.filter(
+  (tefila) =>
+    !tefila.dateValue ||
+    tefila.dateValue < saturdayDateValue,
+)
+
+const tfilotAfterShabbat = upcomingTfilot.filter(
+  (tefila) =>
+    (tefila.dateValue ?? '') >
+    saturdayDateValue,
+)
+
 function HomePage({
-  registrations,
-  toggleRegistration,
   showMemberInformation,
   openInformation,
 }: HomePageProps) {
@@ -51,28 +74,25 @@ function HomePage({
       </section>
 
       <section className="space-y-3">
-        {upcomingTfilot.map((tefila) => (
-          <MinyanCard
+        {tfilotBeforeShabbat.map((tefila) => (
+          <LiveMinyanCard
             key={tefila.id}
             tefila={tefila}
-            registered={Boolean(registrations[tefila.id])}
-            onToggleRegistration={() =>
-              toggleRegistration(tefila.id)
-            }
           />
         ))}
 
+        <LiveMinyanCard
+          tefila={kabbalatShabbat}
+        />
+
         <ProgramCard />
 
-        <MinyanCard
-          tefila={sundayTefila}
-          registered={Boolean(
-            registrations[sundayTefila.id],
-          )}
-          onToggleRegistration={() =>
-            toggleRegistration(sundayTefila.id)
-          }
-        />
+        {tfilotAfterShabbat.map((tefila) => (
+          <LiveMinyanCard
+            key={tefila.id}
+            tefila={tefila}
+          />
+        ))}
       </section>
 
       {showMemberInformation && (
@@ -370,6 +390,54 @@ function SponsorsSection() {
       </div>
     </section>
   )
+}
+
+function findNextWeekday(
+  startDate: Date,
+  weekday: number,
+): Date {
+  const result = new Date(startDate)
+  result.setHours(0, 0, 0, 0)
+
+  const daysUntil =
+    (weekday - result.getDay() + 7) % 7
+
+  result.setDate(result.getDate() + daysUntil)
+
+  return result
+}
+
+function addDays(
+  date: Date,
+  numberOfDays: number,
+): Date {
+  const result = new Date(date)
+  result.setDate(result.getDate() + numberOfDays)
+
+  return result
+}
+
+function formatDateValue(
+  date: Date,
+): string {
+  const year = date.getFullYear()
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0')
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function formatSwedishDate(
+  date: Date,
+): string {
+  return new Intl.DateTimeFormat('sv-SE', {
+    day: 'numeric',
+    month: 'long',
+  }).format(date)
 }
 
 export default HomePage

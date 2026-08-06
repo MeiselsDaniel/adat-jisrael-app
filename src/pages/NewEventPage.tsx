@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { saveEvent } from '../services/eventService'
 import type { FormEvent } from 'react'
 import {
   ArrowLeft,
@@ -138,7 +139,9 @@ function NewEventPage({
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault()
     setError('')
     setSaved(false)
@@ -218,8 +221,20 @@ function NewEventPage({
           : undefined,
     }
 
-    onSave(newEvent)
-    setSaved(true)
+    try {
+      await saveEvent(newEvent)
+      onSave(newEvent)
+      setSaved(true)
+    } catch (caughtError) {
+      console.error(
+        'Kunde inte spara händelsen:',
+        caughtError,
+      )
+
+      setError(
+        'Händelsen kunde inte sparas. Försök igen.',
+      )
+    }
   }
 
   return (
@@ -535,7 +550,7 @@ function NewEventPage({
         {saved && (
           <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
             <Check className="h-5 w-5" />
-            Händelsen har sparats i prototypen.
+            Händelsen har sparats i Firebase.
           </div>
         )}
 
@@ -548,8 +563,7 @@ function NewEventPage({
         </button>
 
         <p className="px-3 text-center text-xs leading-5 text-slate-400">
-          Händelsen sparas ännu inte permanent. Firebase
-          kopplas in senare.
+          Händelsen sparas permanent i Firebase.
         </p>
       </form>
     </div>
