@@ -8,6 +8,7 @@ export type ProgramItem = {
     | 'mic'
     | 'food'
     | 'moon'
+    | 'wine'
 }
 
 export type TodayProgram = {
@@ -42,12 +43,6 @@ export const todayProgram: TodayProgram = {
       icon: 'mic',
       label: 'Predikan',
       value: 'Rabbin Amster',
-    },
-    {
-      id: 'kiddush',
-      icon: 'food',
-      label: 'Kiddush',
-      value: 'Familjen Fried',
     },
     {
       id: 'havdala',

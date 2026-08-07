@@ -9,6 +9,7 @@ import EventManagerPage from './pages/EventManagerPage'
 import HomePage from './pages/HomePage'
 import InformationPage from './pages/InformationPage'
 import KiddushPage from './pages/KiddushPage'
+import KiddushAdminPage from './pages/KiddushAdminPage'
 import LoginPage from './pages/LoginPage'
 import MembershipPage from './pages/MembershipPage'
 import MorePage from './pages/MorePage'
@@ -30,6 +31,7 @@ type AdminView =
   | 'dashboard'
   | 'tfilot'
   | 'events'
+  | 'kiddush'
   | 'newEvent'
 
 function App() {
@@ -119,7 +121,7 @@ function App() {
   if (adminOpen) {
     return (
       <div className="min-h-screen bg-slate-100 text-slate-900">
-        <div className="mx-auto min-h-screen w-full max-w-md bg-[#f8fafc] px-4 py-5 shadow-xl">
+        <div className="mx-auto min-h-screen w-full max-w-md bg-[#f8fafc] px-4 pb-28 pt-5 shadow-xl">
           {adminView === 'dashboard' && (
             <AdminPage
               onBack={closeAdmin}
@@ -131,6 +133,9 @@ function App() {
               }
               onOpenEvents={() =>
                 setAdminView('events')
+              }
+              onOpenKiddush={() =>
+                setAdminView('kiddush')
               }
             />
           )}
@@ -160,6 +165,14 @@ function App() {
             />
           )}
 
+          {adminView === 'kiddush' && (
+            <KiddushAdminPage
+              onBack={() =>
+                setAdminView('dashboard')
+              }
+            />
+          )}
+
           {adminView === 'newEvent' && (
             <NewEventPage
               currentUserId={currentUser.id}
@@ -170,6 +183,16 @@ function App() {
             />
           )}
         </div>
+
+        <BottomNavigation
+          page={page}
+          user={currentUser}
+          setPage={(nextPage) => {
+            setPage(nextPage)
+            setAdminOpen(false)
+            setAdminView('dashboard')
+          }}
+        />
       </div>
     )
   }
@@ -183,7 +206,10 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-[#f8fafc] shadow-xl">
-        <Header page={page} />
+        <Header
+          page={page}
+          userName={currentUser.name}
+        />
 
         <main className="flex-1 px-4 pb-28 pt-5">
           {page === 'home' && (

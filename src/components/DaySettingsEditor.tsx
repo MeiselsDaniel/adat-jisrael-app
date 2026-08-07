@@ -6,6 +6,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { getHebcalDayInfo } from '../services/hebcalService'
 import {
   saveDaySettings,
   subscribeToDaySettings,
@@ -23,6 +24,10 @@ function DaySettingsEditor({
 
   const defaultDayType =
     getDefaultDayType(dateValue)
+
+
+  const hebcalInfo =
+    getHebcalDayInfo(dateValue)
 
   const [open, setOpen] = useState(false)
   const [dayType, setDayType] =
@@ -175,6 +180,44 @@ function DaySettingsEditor({
           <p className="mt-1 text-xs text-slate-500">
             {getDayTypeLabel(dayType)}
           </p>
+
+          {hebcalInfo.isShabbatMevarchim && (
+            <p className="mt-1 text-xs font-bold text-[#68123f]">
+              Shabbat Mevarchim
+            </p>
+          )}
+
+          {hebcalInfo.roshChodeshName && (
+            <p className="mt-1 text-xs font-bold text-[#68123f]">
+              {hebcalInfo.roshChodeshName}
+            </p>
+          )}
+
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-slate-600">
+            {showCandleLighting &&
+              (
+                customCandleLightingTime ||
+                hebcalInfo.candleLightingTime
+              ) && (
+                <span>
+                  Ljuständning{' '}
+                  {customCandleLightingTime ||
+                    hebcalInfo.candleLightingTime}
+                </span>
+              )}
+
+            {showHavdala &&
+              (
+                customHavdalaTime ||
+                hebcalInfo.havdalaTime
+              ) && (
+                <span>
+                  Havdala{' '}
+                  {customHavdalaTime ||
+                    hebcalInfo.havdalaTime}
+                </span>
+              )}
+          </div>
         </div>
 
         {open ? (
@@ -261,7 +304,29 @@ function DaySettingsEditor({
           />
 
           {showCandleLighting && (
-            <TimeInput
+            <div className="space-y-2">
+              {(
+                customCandleLightingTime ||
+                hebcalInfo.candleLightingTime
+              ) && (
+                <p className="rounded-2xl bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800">
+                  Nuvarande ljuständning:{' '}
+                  <strong>
+                    {customCandleLightingTime ||
+                      hebcalInfo.candleLightingTime}
+                  </strong>
+                  {customCandleLightingTime &&
+                    hebcalInfo.candleLightingTime &&
+                    customCandleLightingTime !==
+                      hebcalInfo.candleLightingTime && (
+                      <span className="mt-1 block text-xs font-medium text-sky-700">
+                        HebCal: {hebcalInfo.candleLightingTime}
+                      </span>
+                    )}
+                </p>
+              )}
+
+              <TimeInput
               label="Egen ljuständningstid"
               value={
                 customCandleLightingTime
@@ -270,6 +335,7 @@ function DaySettingsEditor({
                 setCustomCandleLightingTime
               }
             />
+            </div>
           )}
 
           <Toggle
@@ -279,13 +345,36 @@ function DaySettingsEditor({
           />
 
           {showHavdala && (
-            <TimeInput
+            <div className="space-y-2">
+              {(
+                customHavdalaTime ||
+                hebcalInfo.havdalaTime
+              ) && (
+                <p className="rounded-2xl bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800">
+                  Nuvarande Havdala:{' '}
+                  <strong>
+                    {customHavdalaTime ||
+                      hebcalInfo.havdalaTime}
+                  </strong>
+                  {customHavdalaTime &&
+                    hebcalInfo.havdalaTime &&
+                    customHavdalaTime !==
+                      hebcalInfo.havdalaTime && (
+                      <span className="mt-1 block text-xs font-medium text-sky-700">
+                        HebCal: {hebcalInfo.havdalaTime}
+                      </span>
+                    )}
+                </p>
+              )}
+
+              <TimeInput
               label="Egen Havdala-tid"
               value={customHavdalaTime}
               onChange={
                 setCustomHavdalaTime
               }
             />
+            </div>
           )}
 
           <label className="block">
@@ -424,6 +513,7 @@ function TimeInput({
       <span className="text-sm font-bold text-slate-700">
         {label}
       </span>
+
 
       <input
         type="time"

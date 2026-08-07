@@ -5,14 +5,36 @@ import {
   Heart,
   Info,
   Mic2,
-  MoonStar,
   Star,
   Utensils,
+  Wine,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import LiveMinyanCard from '../components/LiveMinyanCard'
 import { informationPosts } from '../data/events'
 import { synagogueSettings } from '../data/settings'
+import { getHebcalDayInfo } from '../services/hebcalService'
+import {
+  GeoLocation,
+  Zmanim,
+} from '@hebcal/core'
+import {
+  subscribeToDaySettings,
+  type DaySettings,
+} from '../services/daySettingsService'
+import {
+  subscribeToKiddushDate,
+  type KiddushBooking,
+} from '../services/kiddushService'
+import {
+  subscribeToTfilotBetween,
+  type TefilaRecord,
+} from '../services/tefilaService'
 import {
   todayProgram,
   type ProgramItem,
@@ -30,8 +52,17 @@ const upcomingTfilot = generateStandardTfilot()
 const nextFriday = findNextWeekday(new Date(), 5)
 const nextSaturday = addDays(nextFriday, 1)
 
+const secondFriday = addDays(nextFriday, 7)
+const secondSaturday = addDays(nextSaturday, 7)
+
 const fridayDateValue = formatDateValue(nextFriday)
 const saturdayDateValue = formatDateValue(nextSaturday)
+
+const secondFridayDateValue =
+  formatDateValue(secondFriday)
+
+const secondSaturdayDateValue =
+  formatDateValue(secondSaturday)
 
 const scheduleWithKabbalat =
   synagogueSettings.schedule as typeof synagogueSettings.schedule & {
@@ -49,22 +80,160 @@ const kabbalatShabbat: Tefila = {
   attending: 0,
 }
 
-const tfilotBeforeShabbat = upcomingTfilot.filter(
-  (tefila) =>
-    !tefila.dateValue ||
-    tefila.dateValue < saturdayDateValue,
-)
-
-const tfilotAfterShabbat = upcomingTfilot.filter(
-  (tefila) =>
-    (tefila.dateValue ?? '') >
-    saturdayDateValue,
-)
+const secondKabbalatShabbat: Tefila = {
+  id: `${secondFridayDateValue}-kabbalat-shabbat`,
+  firestoreId:
+    `${secondFridayDateValue}-kabbalat-shabbat`,
+  dateValue: secondFridayDateValue,
+  day: 'Fredag',
+  date: formatSwedishDate(secondFriday),
+  title: 'Kabbalat Shabbat',
+  time:
+    scheduleWithKabbalat.kabbalatShabbat ??
+    '19.30',
+  attending: 0,
+}
 
 function HomePage({
   showMemberInformation,
   openInformation,
 }: HomePageProps) {
+  const [firebaseTfilot, setFirebaseTfilot] =
+    useState<TefilaRecord[]>([])
+
+  const [now, setNow] =
+    useState(() => new Date())
+
+  useEffect(() => {
+    const intervalId = window.setInterval(
+      () => {
+        setNow(new Date())
+      },
+      60_000,
+    )
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [])
+
+  useEffect(() => {
+    const startDateValue =
+      formatDateValue(new Date())
+
+    const endDateValue =
+      formatDateValue(
+        addDays(new Date(), 14),
+      )
+
+    return subscribeToTfilotBetween(
+      startDateValue,
+      endDateValue,
+      setFirebaseTfilot,
+      (error) => {
+        /*
+         * Standardschemat fortsätter visas även om
+         * Firestore tillfälligt inte kan läsas.
+         */
+        console.error(
+          'Kunde inte läsa tfilot till startsidan:',
+          error,
+        )
+      },
+    )
+  }, [])
+
+  const mergedTfilot = useMemo(
+    () =>
+      mergeStandardAndFirebaseTfilot(
+        upcomingTfilot,
+        firebaseTfilot,
+      )
+        .filter((tefila) =>
+          isTefilaStillCurrent(
+            tefila,
+            now,
+          ),
+        )
+        .map((tefila) => {
+          if (!tefila.dateValue) {
+            return tefila
+          }
+
+          const hebcalInfo =
+            getHebcalDayInfo(
+              tefila.dateValue,
+            )
+
+          if (
+            !hebcalInfo.isRoshChodesh ||
+            !hebcalInfo.roshChodeshName
+          ) {
+            return tefila
+          }
+
+          return {
+            ...tefila,
+            day:
+              `${tefila.day} · ${hebcalInfo.roshChodeshName}`,
+          }
+        }),
+    [firebaseTfilot, now],
+  )
+
+  const displayedKabbalatShabbat =
+    mergedTfilot.find(
+      (tefila) =>
+        tefila.firestoreId ===
+        kabbalatShabbat.firestoreId,
+    ) ?? kabbalatShabbat
+
+  const showKabbalatShabbat =
+    isTefilaStillCurrent(
+      displayedKabbalatShabbat,
+      now,
+    )
+
+  const displayedSecondKabbalatShabbat =
+    mergedTfilot.find(
+      (tefila) =>
+        tefila.firestoreId ===
+        secondKabbalatShabbat.firestoreId,
+    ) ?? secondKabbalatShabbat
+
+  const showSecondKabbalatShabbat =
+    isTefilaStillCurrent(
+      displayedSecondKabbalatShabbat,
+      now,
+    )
+
+  const tfilotBeforeShabbat =
+    mergedTfilot.filter(
+      (tefila) =>
+        (tefila.dateValue ?? '') <
+          saturdayDateValue &&
+        tefila.firestoreId !==
+          kabbalatShabbat.firestoreId,
+    )
+
+  const tfilotBetweenShabbatot =
+    mergedTfilot.filter(
+      (tefila) =>
+        (tefila.dateValue ?? '') >
+          saturdayDateValue &&
+        (tefila.dateValue ?? '') <
+          secondSaturdayDateValue &&
+        tefila.firestoreId !==
+          secondKabbalatShabbat.firestoreId,
+    )
+
+  const tfilotAfterSecondShabbat =
+    mergedTfilot.filter(
+      (tefila) =>
+        (tefila.dateValue ?? '') >
+        secondSaturdayDateValue,
+    )
+
   return (
     <div className="space-y-7">
       <section>
@@ -81,18 +250,47 @@ function HomePage({
           />
         ))}
 
-        <LiveMinyanCard
-          tefila={kabbalatShabbat}
+        {showKabbalatShabbat && (
+          <ErevShabbatCard
+            tefila={displayedKabbalatShabbat}
+          />
+        )}
+
+        <ProgramCard
+          dateValue={saturdayDateValue}
         />
 
-        <ProgramCard />
+        {tfilotBetweenShabbatot.map(
+          (tefila) => (
+            <LiveMinyanCard
+              key={tefila.id}
+              tefila={tefila}
+            />
+          ),
+        )}
 
-        {tfilotAfterShabbat.map((tefila) => (
-          <LiveMinyanCard
-            key={tefila.id}
-            tefila={tefila}
+        {showSecondKabbalatShabbat && (
+          <ErevShabbatCard
+            tefila={
+              displayedSecondKabbalatShabbat
+            }
           />
-        ))}
+        )}
+
+        <ProgramCard
+          dateValue={
+            secondSaturdayDateValue
+          }
+        />
+
+        {tfilotAfterSecondShabbat.map(
+          (tefila) => (
+            <LiveMinyanCard
+              key={tefila.id}
+              tefila={tefila}
+            />
+          ),
+        )}
       </section>
 
       {showMemberInformation && (
@@ -108,8 +306,312 @@ function HomePage({
   )
 }
 
-function ProgramCard() {
-  const isHoliday = todayProgram.type === 'holiday'
+type ErevShabbatCardProps = {
+  tefila: Tefila
+}
+
+function ErevShabbatCard({
+  tefila,
+}: ErevShabbatCardProps) {
+  const cardFridayDateValue =
+    tefila.dateValue ??
+    fridayDateValue
+
+  const cardFridayHebcalInfo =
+    getHebcalDayInfo(
+      cardFridayDateValue,
+    )
+
+  const [daySettings, setDaySettings] =
+    useState<DaySettings | null>(null)
+
+  useEffect(() => {
+    return subscribeToDaySettings(
+      cardFridayDateValue,
+      setDaySettings,
+      (error) => {
+        console.error(
+          'Kunde inte läsa fredagens dagsinställningar:',
+          error,
+        )
+
+        setDaySettings(null)
+      },
+    )
+  }, [cardFridayDateValue])
+
+  const showCandleLighting =
+    daySettings?.showCandleLighting ?? true
+
+  const candleLightingTime =
+    daySettings?.customCandleLightingTime?.trim() ||
+    cardFridayHebcalInfo.candleLightingTime
+
+  const candleLightingInfo =
+    showCandleLighting &&
+    candleLightingTime
+      ? {
+          label: 'Ljuständning',
+          value: candleLightingTime,
+        }
+      : undefined
+
+  return (
+    <LiveMinyanCard
+      tefila={tefila}
+      extraInfo={candleLightingInfo}
+    />
+  )
+}
+
+type ProgramCardProps = {
+  dateValue: string
+}
+
+function ProgramCard({
+  dateValue,
+}: ProgramCardProps) {
+  const cardSaturdayDateValue =
+    dateValue
+
+  const cardSaturday =
+    new Date(
+      `${cardSaturdayDateValue}T12:00:00`,
+    )
+
+  const shabbatHebcalInfo =
+    getHebcalDayInfo(
+      cardSaturdayDateValue,
+    )
+
+  const [daySettings, setDaySettings] =
+    useState<DaySettings | null>(null)
+
+  const [kiddush, setKiddush] =
+    useState<KiddushBooking | null>(null)
+
+  useEffect(() => {
+    return subscribeToDaySettings(
+      cardSaturdayDateValue,
+      setDaySettings,
+      (error) => {
+        /*
+         * Om Day Settings inte kan läsas ska
+         * Shabbat-kortet ändå fungera med HebCal.
+         */
+        console.error(
+          'Kunde inte läsa dagsinställningar på startsidan:',
+          error,
+        )
+
+        setDaySettings(null)
+      },
+    )
+  }, [cardSaturdayDateValue])
+
+  useEffect(() => {
+    return subscribeToKiddushDate(
+      cardSaturdayDateValue,
+      setKiddush,
+      (error) => {
+        console.error(
+          'Kunde inte läsa Kiddush på startsidan:',
+          error,
+        )
+
+        setKiddush(null)
+      },
+    )
+  }, [cardSaturdayDateValue])
+
+  const isHoliday =
+    daySettings?.dayType === 'holiday' ||
+    daySettings?.dayType === 'shabbatHoliday' ||
+    shabbatHebcalInfo.isHoliday
+
+  const customHolidayName =
+    daySettings?.holidayName?.trim()
+
+  const baseDisplayTitle =
+    customHolidayName ||
+    shabbatHebcalInfo.holidayNames[0] ||
+    shabbatHebcalInfo.parasha ||
+    todayProgram.title
+
+  const shabbatNotices = [
+    shabbatHebcalInfo.isShabbatMevarchim
+      ? 'Shabbat Mevarchim'
+      : null,
+    shabbatHebcalInfo.roshChodeshName,
+  ].filter(Boolean)
+
+  const displayTitle =
+    [
+      baseDisplayTitle,
+      ...shabbatNotices,
+    ].join(' · ')
+
+  const displayDate =
+    `Lördag ${formatSwedishDate(cardSaturday)}`
+
+  const hebrewDate =
+    shabbatHebcalInfo.hebrewDate
+
+  const showHavdala =
+    daySettings?.showHavdala ?? true
+
+  const havdalaTime =
+    daySettings?.customHavdalaTime?.trim() ||
+    shabbatHebcalInfo.havdalaTime
+
+
+  const minchaGedolaTime =
+    getMinchaGedolaTime(cardSaturday)
+
+  const sermon =
+    daySettings?.sermon?.trim()
+
+  const comment =
+    daySettings?.comment?.trim()
+
+  const showKiddush =
+    kiddush?.status !== 'blocked'
+
+  const kiddushSponsor =
+    kiddush?.status === 'approved'
+      ? kiddush.sponsor?.trim()
+      : undefined
+
+  const kiddushDedication =
+    kiddush?.status === 'approved'
+      ? kiddush.dedication?.trim()
+      : undefined
+
+  /*
+   * Bygg först de vanliga programraderna.
+   * Därefter sätter vi ordningen explicit:
+   *
+   * Shacharit → Predikan → Kiddush →
+   * Mincha → Havdala
+   */
+  const baseProgram =
+    todayProgram.program.flatMap(
+      (item): ProgramItem[] => {
+        if (item.id === 'havdala') {
+          if (!showHavdala) {
+            return []
+          }
+
+          return [
+            {
+              ...item,
+              value:
+                havdalaTime ||
+                item.value,
+            },
+          ]
+        }
+
+        if (
+          item.id === 'sermon' ||
+          item.label
+            .toLowerCase()
+            .includes('predikan')
+        ) {
+          if (!sermon) {
+            return []
+          }
+
+          return [
+            {
+              ...item,
+              value: sermon,
+            },
+          ]
+        }
+
+        return [item]
+      },
+    )
+
+  const findProgramItem = (
+    id: string,
+    label: string,
+  ) =>
+    baseProgram.find(
+      (item) =>
+        item.id === id ||
+        item.label
+          .toLowerCase()
+          .includes(label),
+    )
+
+  const shacharitItem =
+    findProgramItem(
+      'shacharit',
+      'shacharit',
+    )
+
+  const sermonProgramItem =
+    baseProgram.find(
+      (item) =>
+        item.id === 'sermon' ||
+        item.label
+          .toLowerCase()
+          .includes('predikan'),
+    )
+
+  const minchaSource =
+    findProgramItem(
+      'mincha',
+      'mincha',
+    )
+
+  const minchaItem: ProgramItem | undefined =
+    minchaSource
+      ? {
+          ...minchaSource,
+          value:
+            minchaGedolaTime ||
+            minchaSource.value,
+        }
+      : undefined
+
+  const havdalaItem =
+    findProgramItem(
+      'havdala',
+      'havdala',
+    )
+
+  const kiddushProgramItem: ProgramItem | null =
+    showKiddush
+      ? {
+          id: 'firebase-kiddush',
+          label: 'Kiddush',
+          value: kiddushSponsor
+            ? kiddushDedication
+              ? `${kiddushSponsor} bjuder på Kiddush. ${formatKiddushDedication(
+                  kiddushDedication,
+                  kiddush?.dedicationType,
+                )}`
+              : `${kiddushSponsor} bjuder på Kiddush.`
+            : 'Adat Jisrael bjuder på Kiddush.',
+          icon: 'wine',
+        }
+      : null
+
+  const displayProgram: ProgramItem[] = [
+    shacharitItem,
+    sermonProgramItem,
+    kiddushProgramItem,
+    minchaItem,
+    havdalaItem,
+  ].filter(
+    (item): item is ProgramItem =>
+      item !== undefined &&
+      item !== null,
+  )
+
 
   const accentColor = isHoliday
     ? 'bg-amber-700'
@@ -133,14 +635,14 @@ function ProgramCard() {
     >
       <div className={`${accentColor} px-5 py-3 text-white`}>
         <div className="flex items-center gap-2">
-          {isHoliday ? (
+          {isHoliday && (
             <Star className="h-5 w-5" />
-          ) : (
-            <MoonStar className="h-5 w-5" />
           )}
 
           <p className="text-sm font-bold uppercase tracking-wide">
-            {isHoliday ? 'Högtid' : 'Shabbat'}
+            {isHoliday
+              ? 'Högtid'
+              : 'Shabbat'}
           </p>
         </div>
       </div>
@@ -151,33 +653,44 @@ function ProgramCard() {
             <p
               className={`text-sm font-semibold ${accentTextColor}`}
             >
-              {todayProgram.date}
+              {displayDate}
             </p>
 
             <h2 className="mt-1 text-2xl font-bold text-[#183b70]">
-              {todayProgram.title}
+              {displayTitle}
             </h2>
-          </div>
 
-          <div
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${accentBackground} ${accentTextColor}`}
-          >
-            {isHoliday ? (
-              <Star className="h-6 w-6" />
-            ) : (
-              <MoonStar className="h-6 w-6" />
+            {hebrewDate && (
+              <p className="mt-1 text-sm font-semibold text-slate-500">
+                {hebrewDate}
+              </p>
             )}
           </div>
+
+          {isHoliday && (
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${accentBackground} ${accentTextColor}`}
+            >
+              <Star className="h-6 w-6" />
+            </div>
+          )}
         </div>
 
         <div className="mt-5 divide-y divide-slate-100">
-          {todayProgram.program.map((item) => (
+          {displayProgram.map((item) => (
             <ProgramDetail
               key={item.id}
               item={item}
             />
           ))}
         </div>
+
+        {comment && (
+          <div className="mt-5 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+            {comment}
+          </div>
+        )}
+
       </div>
     </article>
   )
@@ -224,11 +737,14 @@ function getProgramIcon(
     case 'mic':
       return <Mic2 className={iconClassName} />
 
+    case 'wine':
+      return <Wine className={iconClassName} />
+
     case 'food':
       return <Utensils className={iconClassName} />
 
     case 'moon':
-      return <MoonStar className={iconClassName} />
+      return <Clock className={iconClassName} />
 
     default:
       return <Star className={iconClassName} />
@@ -392,6 +908,157 @@ function SponsorsSection() {
   )
 }
 
+function isTefilaStillCurrent(
+  tefila: Tefila,
+  now: Date,
+): boolean {
+  if (!tefila.dateValue) {
+    return true
+  }
+
+  const normalizedTime =
+    tefila.time.replace('.', ':')
+
+  const timeMatch = normalizedTime.match(
+    /^(\d{1,2}):(\d{2})$/,
+  )
+
+  if (!timeMatch) {
+    return true
+  }
+
+  const start = new Date(
+    `${tefila.dateValue}T00:00:00`,
+  )
+
+  start.setHours(
+    Number(timeMatch[1]),
+    Number(timeMatch[2]),
+    0,
+    0,
+  )
+
+  const removeAfter =
+    new Date(
+      start.getTime() +
+        2 * 60 * 60 * 1000,
+    )
+
+  return now < removeAfter
+}
+
+function mergeStandardAndFirebaseTfilot(
+  standardTfilot: Tefila[],
+  firebaseTfilot: TefilaRecord[],
+): Tefila[] {
+  const merged = new Map<string, Tefila>()
+
+  for (const tefila of standardTfilot) {
+    merged.set(
+      getTefilaKey(tefila),
+      tefila,
+    )
+  }
+
+  for (const record of firebaseTfilot) {
+    const existing =
+      merged.get(record.id)
+
+    merged.set(
+      record.id,
+      convertTefilaRecord(
+        record,
+        existing,
+      ),
+    )
+  }
+
+  return Array.from(
+    merged.values(),
+  ).sort(compareTfilot)
+}
+
+function convertTefilaRecord(
+  record: TefilaRecord,
+  existing?: Tefila,
+): Tefila {
+  const date = new Date(
+    `${record.date}T12:00:00`,
+  )
+
+  return {
+    id: record.id,
+    firestoreId: record.id,
+    dateValue: record.date,
+    day:
+      existing?.day ??
+      formatSwedishWeekday(date),
+    date:
+      existing?.date ??
+      formatSwedishDate(date),
+    title: record.title,
+    time: record.time,
+    attending:
+      existing?.attending ?? 0,
+  }
+}
+
+function getTefilaKey(
+  tefila: Tefila,
+): string {
+  return (
+    tefila.firestoreId ??
+    `tefila-${tefila.id}`
+  )
+}
+
+function compareTfilot(
+  first: Tefila,
+  second: Tefila,
+): number {
+  const firstDate =
+    first.dateValue ?? ''
+
+  const secondDate =
+    second.dateValue ?? ''
+
+  const dateComparison =
+    firstDate.localeCompare(secondDate)
+
+  if (dateComparison !== 0) {
+    return dateComparison
+  }
+
+  return normalizeFeedTime(
+    first.time,
+  ).localeCompare(
+    normalizeFeedTime(second.time),
+  )
+}
+
+function normalizeFeedTime(
+  value: string,
+): string {
+  return value.replace('.', ':')
+}
+
+function formatSwedishWeekday(
+  date: Date,
+): string {
+  const weekday =
+    new Intl.DateTimeFormat(
+      'sv-SE',
+      {
+        weekday: 'long',
+      },
+    ).format(date)
+
+  return (
+    weekday.charAt(0).toUpperCase() +
+    weekday.slice(1)
+  )
+}
+
 function findNextWeekday(
   startDate: Date,
   weekday: number,
@@ -440,4 +1107,73 @@ function formatSwedishDate(
   }).format(date)
 }
 
+function formatKiddushDedication(
+  dedication: string,
+  type?: KiddushBooking['dedicationType'],
+): string {
+  const clean = dedication
+    .trim()
+    .replace(/[.!?]+$/, '')
+
+  if (type === 'memory') {
+    return `Till minne av ${clean}.`
+  }
+
+  if (type === 'celebration') {
+    return `För att fira ${clean}.`
+  }
+
+  if (type === 'custom') {
+    return `${clean}.`
+  }
+
+  if (type === 'occasion') {
+    return `Med anledning av ${clean}.`
+  }
+
+  // Gamla bokningar saknar typ.
+  return `${clean}.`
+}
+
 export default HomePage
+
+function getMinchaGedolaTime(
+  date: Date,
+): string | null {
+  try {
+    const location = new GeoLocation(
+      'Stockholm',
+      59.3293,
+      18.0686,
+      0,
+      'Europe/Stockholm',
+    )
+
+    const zmanim = new Zmanim(
+      location,
+      date,
+      false,
+    )
+
+    const minchaGedola =
+      zmanim.minchaGedola()
+
+    return new Intl.DateTimeFormat(
+      'sv-SE',
+      {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Europe/Stockholm',
+      },
+    ).format(minchaGedola)
+  } catch (error) {
+    console.error(
+      'Kunde inte beräkna Mincha Gedolah:',
+      error,
+    )
+
+    return null
+  }
+}
+

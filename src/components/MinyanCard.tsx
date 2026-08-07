@@ -32,6 +32,10 @@ type MinyanCardProps = {
   minyanResult?: MinyanResult
   actualAttendance?: number
   canManage?: boolean
+  extraInfo?: {
+    label: string
+    value: string
+  }
   onRegister: (
     guestCount: number,
     guestComment?: string,
@@ -58,6 +62,7 @@ function MinyanCard({
   minyanResult,
   actualAttendance,
   canManage = false,
+  extraInfo,
   onRegister,
   onUnregister,
   onCancel,
@@ -308,6 +313,18 @@ function MinyanCard({
               {tefila.date}
             </p>
 
+            {extraInfo && (
+              <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
+                <span aria-hidden="true">🕯️</span>
+                <span>
+                  {extraInfo.label}
+                </span>
+                <span className="font-bold text-slate-900">
+                  {extraInfo.value}
+                </span>
+              </p>
+            )}
+
             <p
               className={`mt-3 font-bold ${
                 isKabbalatShabbat
@@ -322,6 +339,7 @@ function MinyanCard({
               <Clock className="h-4 w-4" />
               {tefila.time}
             </p>
+
           </div>
 
           <div>

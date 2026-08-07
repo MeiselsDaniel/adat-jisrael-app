@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   CalendarDays,
@@ -11,10 +11,19 @@ import {
 import KiddushCard from '../components/KiddushCard'
 import type { KiddushListItem } from '../components/KiddushCard'
 import { generateKiddushDates } from '../utils/generateKiddushDates'
+import { useAuth } from '../hooks/useAuth'
+import {
+  createKiddushRequest,
+  subscribeToAllKiddush,
+  type KiddushBooking,
+  type KiddushDedicationType,
+} from '../services/kiddushService'
 
 type KiddushFilter = 'all' | 'available' | 'booked'
 
 function KiddushPage() {
+  const { firebaseUser, profile } = useAuth()
+
   const [items, setItems] = useState<KiddushListItem[]>(
   generateKiddushDates(),
 )
@@ -27,10 +36,41 @@ function KiddushPage() {
 
   const [host, setHost] = useState('')
   const [dedication, setDedication] = useState('')
+  const [dedicationType, setDedicationType] =
+    useState<KiddushDedicationType>('occasion')
   const [comment, setComment] = useState('')
   const [error, setError] = useState('')
   const [confirmationOpen, setConfirmationOpen] =
     useState(false)
+
+  const [showKiddushRules, setShowKiddushRules] =
+    useState(false)
+
+  useEffect(() => {
+    const unsubscribe =
+      subscribeToAllKiddush(
+        (bookings) => {
+          setItems(
+            mergeKiddushBookings(
+              generateKiddushDates(),
+              bookings,
+            ),
+          )
+        },
+        (caughtError) => {
+          console.error(
+            'Kunde inte läsa Kiddushbokningar:',
+            caughtError,
+          )
+
+          setError(
+            'Kiddushbokningarna kunde inte hämtas.',
+          )
+        },
+      )
+
+    return unsubscribe
+  }, [])
 
   const filteredItems = useMemo(() => {
     if (filter === 'available') {
@@ -58,6 +98,7 @@ function KiddushPage() {
     setSelectedItem(item)
     setHost('')
     setDedication('')
+    setDedicationType('occasion')
     setComment('')
     setError('')
     setConfirmationOpen(false)
@@ -68,13 +109,20 @@ function KiddushPage() {
     setError('')
   }
 
-  function handleBooking(
+  async function handleBooking(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault()
     setError('')
 
     if (!selectedItem) {
+      return
+    }
+
+    if (!firebaseUser) {
+      setError(
+        'Du måste vara inloggad för att boka Kiddush.',
+      )
       return
     }
 
@@ -85,22 +133,54 @@ function KiddushPage() {
       return
     }
 
-    setItems((current) =>
-      current.map((item) =>
-        item.id === selectedItem.id
-          ? {
-              ...item,
-              status: 'pending',
-              host: host.trim(),
-              dedication:
-                dedication.trim() || undefined,
-              comment: comment.trim() || undefined,
-            }
-          : item,
-      ),
-    )
+    try {
+      await createKiddushRequest({
+        date: selectedItem.dateValue,
+        sponsor: host.trim(),
+        dedication:
+          dedication.trim() || undefined,
+        dedicationType:
+          dedication.trim()
+            ? dedicationType
+            : undefined,
+        comment:
+          comment.trim() || undefined,
+        requestedBy: firebaseUser.uid,
+        requestedByName:
+          profile?.name || undefined,
+      })
 
-    setConfirmationOpen(true)
+      setItems((current) =>
+        current.map((item) =>
+          item.id === selectedItem.id
+            ? {
+                ...item,
+                status: 'booked',
+                host: host.trim(),
+                dedication:
+                  dedication.trim() ||
+                  undefined,
+                comment:
+                  comment.trim() ||
+                  undefined,
+              }
+            : item,
+        ),
+      )
+
+      setConfirmationOpen(true)
+    } catch (caughtError) {
+      console.error(
+        'Kunde inte skicka Kiddushförfrågan:',
+        caughtError,
+      )
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Kunde inte skicka bokningsförfrågan.',
+      )
+    }
   }
 
   function finishBooking() {
@@ -126,8 +206,8 @@ function KiddushPage() {
               </h1>
 
               <p className="mt-2 text-sm leading-6 text-rose-100">
-                Se lediga datum och skicka en
-                bokningsförfrågan för kommande Shabbat.
+                Se lediga datum och boka en kommande
+                Shabbat eller Jom Tov.
               </p>
             </div>
           </div>
@@ -142,6 +222,154 @@ function KiddushPage() {
             </p>
           </div>
         </div>
+      </section>
+
+      <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
+        <button
+          type="button"
+          onClick={() =>
+            setShowKiddushRules(
+              (current) => !current,
+            )
+          }
+          className="flex w-full items-center justify-between gap-4 p-5 text-left"
+          aria-expanded={showKiddushRules}
+        >
+          <div>
+            <h2 className="font-bold text-[#183b70]">
+              Regler för Kiddush
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Läs reglerna innan du bokar.
+            </p>
+          </div>
+
+          <span className="shrink-0 text-sm font-bold text-[#68123f]">
+            {showKiddushRules
+              ? 'Dölj ▲'
+              : 'Visa ▼'}
+          </span>
+        </button>
+
+        {showKiddushRules && (
+          <div className="space-y-5 border-t border-slate-100 px-5 pb-5 pt-4 text-sm leading-6 text-slate-600">
+            <p>
+              Vi uppskattar att du vill ordna en Kiddush i
+              Adat Jisrael. Det betyder mycket för vår
+              församling och våra medlemmar.
+            </p>
+
+            <div>
+              <h3 className="font-bold text-slate-900">
+                Kosher
+              </h3>
+
+              <p className="mt-1">
+                Adat Jisrael följer rabbin Mattias Amsters
+                kosherregler. All mat och dryck som serveras
+                måste därför följa församlingens
+                kosherbestämmelser enligt{' '}
+                <strong>kosher.jfst.se</strong>.
+              </p>
+
+              <p className="mt-2 font-semibold text-slate-800">
+                Vänd dig till Chezi när det gäller catering.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-slate-900">
+                Material och leverans
+              </h3>
+
+              <p className="mt-1">
+                Den som arrangerar Kiddush ansvarar själv,
+                eller genom sin caterer, för allt material
+                som behövs, exempelvis tallrikar, muggar,
+                servetter, bestick, övrigt serveringsmaterial
+                och all dryck.
+              </p>
+
+              <p className="mt-2">
+                All mat och utrustning måste finnas på plats
+                <strong> innan Shabbat eller Jom Tov börjar</strong>.
+                Borttransport kan ske först efter Shabbat
+                eller Jom Tov.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-slate-900">
+                Städning
+              </h3>
+
+              <p className="mt-1">
+                Arrangören ansvarar för att lokalen lämnas i
+                samma skick som den var innan Kiddush.
+              </p>
+
+              <p className="mt-2">
+                Om extra städning krävs kan församlingen
+                komma att ta ut en städavgift för att täcka
+                sina omkostnader.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-slate-900">
+                Gästlista och säkerhet
+              </h3>
+
+              <p className="mt-1">
+                Senast <strong>10 dagar före Kiddush</strong>{' '}
+                ska arrangören skicka en gästlista till
+                synagogan och vid behov hjälpa till att
+                identifiera gäster som inte är kända av
+                församlingen.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-slate-900">
+                Fotografering
+              </h3>
+
+              <p className="mt-1">
+                Under Shabbat och Jom Tov är fotografering,
+                filmning och ljudupptagning inte tillåten.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-sky-50 p-4">
+              <h3 className="font-bold text-[#183b70]">
+                Frågor?
+              </h3>
+
+              <p className="mt-2">
+                Styrelsen:
+                <br />
+                <a
+                  href="mailto:info@adatjisrael.se"
+                  className="font-bold text-[#183b70]"
+                >
+                  info@adatjisrael.se
+                </a>
+              </p>
+
+              <p className="mt-3">
+                Rabbin Mattias Amster:
+                <br />
+                <a
+                  href="mailto:mattias.amster@jfst.se"
+                  className="font-bold text-[#183b70]"
+                >
+                  mattias.amster@jfst.se
+                </a>
+              </p>
+            </div>
+          </div>
+        )}
       </section>
 
       <section>
@@ -249,23 +477,75 @@ function KiddushPage() {
                     />
                   </label>
 
-                  <label className="block">
-                    <span className="text-sm font-bold text-slate-700">
-                      Anledning eller dedikation
-                    </span>
+                  <div className="space-y-3">
+                    
 
-                    <textarea
-                      value={dedication}
-                      onChange={(event) =>
-                        setDedication(
-                          event.target.value,
-                        )
-                      }
-                      rows={3}
-                      placeholder="Exempel: Till minne av..., för att fira..."
-                      className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
-                    />
-                  </label>
+                    <div className="space-y-3">
+                    <label className="block">
+                      <span className="text-sm font-bold text-slate-700">
+                        Typ av dedikation
+                      </span>
+
+                      <select
+                        value={dedicationType}
+                        onChange={(event) =>
+                          setDedicationType(
+                            event.target.value as KiddushDedicationType,
+                          )
+                        }
+                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+                      >
+                        <option value="occasion">
+                          Med anledning av
+                        </option>
+
+                        <option value="memory">
+                          Till minne av
+                        </option>
+
+                        <option value="celebration">
+                          För att fira
+                        </option>
+
+                        <option value="custom">
+                          Egen text
+                        </option>
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="text-sm font-bold text-slate-700">
+                        {dedicationType === 'memory'
+                          ? 'Till minne av vem?'
+                          : dedicationType === 'celebration'
+                            ? 'Vad vill du fira?'
+                            : dedicationType === 'custom'
+                              ? 'Text'
+                              : 'Anledning'}
+                      </span>
+
+                      <textarea
+                        value={dedication}
+                        onChange={(event) =>
+                          setDedication(
+                            event.target.value,
+                          )
+                        }
+                        rows={3}
+                        placeholder={
+                          dedicationType === 'memory'
+                            ? 'Exempel: David ben Moshe'
+                            : dedicationType === 'celebration'
+                              ? 'Exempel: vår dotters bat mitzva'
+                              : dedicationType === 'custom'
+                                ? 'Skriv texten som den ska visas'
+                                : 'Exempel: Ervins födelsedag'
+                        }
+                        className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+                      />
+                    </label>
+                  </div>
+                  </div>
 
                   <label className="block">
                     <span className="text-sm font-bold text-slate-700">
@@ -304,6 +584,79 @@ function KiddushPage() {
       )}
     </div>
   )
+}
+
+function mergeKiddushBookings(
+  generatedItems: KiddushListItem[],
+  bookings: KiddushBooking[],
+): KiddushListItem[] {
+  const bookingsByDate =
+    new Map(
+      bookings.map((booking) => [
+        booking.date,
+        booking,
+      ]),
+    )
+
+  return generatedItems
+    .filter((item) => {
+      const booking =
+        bookingsByDate.get(
+          item.dateValue,
+        )
+
+      return booking?.status !== 'blocked'
+    })
+    .map((item) => {
+      const booking =
+        bookingsByDate.get(
+          item.dateValue,
+        )
+
+      if (!booking) {
+        return {
+          ...item,
+          status: 'available',
+          host: undefined,
+          dedication: undefined,
+          comment: undefined,
+        }
+      }
+
+      if (
+        booking.status === 'approved'
+      ) {
+        return {
+          ...item,
+          status: 'booked',
+          host: booking.sponsor,
+          dedication:
+            booking.dedication,
+          comment:
+            booking.comment,
+        }
+      }
+
+      /*
+       * Gamla testposter med pending
+       * visas tills de är borttagna.
+       */
+      if (
+        booking.status === 'pending'
+      ) {
+        return {
+          ...item,
+          status: 'pending',
+          host: booking.sponsor,
+          dedication:
+            booking.dedication,
+          comment:
+            booking.comment,
+        }
+      }
+
+      return item
+    })
 }
 
 type FilterButtonProps = {
@@ -350,12 +703,12 @@ function BookingConfirmation({
       </div>
 
       <h2 className="mt-6 text-2xl font-bold text-[#183b70]">
-        Förfrågan är skickad
+        Kiddush är bokad
       </h2>
 
       <p className="mt-3 leading-7 text-slate-500">
-        Adat Jisrael kommer att behandla bokningen innan
-        datumet markeras som slutgiltigt bokat.
+        Din Kiddushbokning är registrerad.
+        Kontakta Adat Jisrael om något behöver ändras.
       </p>
 
       <div className="mt-6 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-200">
@@ -378,8 +731,7 @@ function BookingConfirmation({
       </button>
 
       <p className="mt-4 text-xs leading-5 text-slate-400">
-        Bokningen sparas ännu bara i prototypen och
-        återställs om sidan laddas om.
+        Bokningen är sparad i Adat Jisraels Kiddushkalender.
       </p>
     </div>
   )

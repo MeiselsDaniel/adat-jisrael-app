@@ -15,11 +15,16 @@ import type { Tefila } from '../types'
 type LiveMinyanCardProps = {
   tefila: Tefila
   showAdminControls?: boolean
+  extraInfo?: {
+    label: string
+    value: string
+  }
 }
 
 function LiveMinyanCard({
   tefila,
   showAdminControls = false,
+  extraInfo,
 }: LiveMinyanCardProps) {
   const { firebaseUser, profile } = useAuth()
 
@@ -142,6 +147,7 @@ function LiveMinyanCard({
         record?.actualAttendance
       }
       canManage={canManage}
+      extraInfo={extraInfo}
       onRegister={register}
       onUnregister={unregister}
       onCancel={cancelTefila}

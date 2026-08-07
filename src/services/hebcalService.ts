@@ -13,6 +13,7 @@ export type HebcalDayInfo = {
   isShabbat: boolean
   isErevShabbat: boolean
   isRoshChodesh: boolean
+  isShabbatMevarchim: boolean
   isHoliday: boolean
   isErevHoliday: boolean
 
@@ -40,16 +41,14 @@ export function getHebcalDayInfo(
     createFallbackInfo(dateValue, date)
 
   try {
-    const location =
-      Location.lookup('Stockholm')
-
-    if (!location) {
-      console.error(
-        'HebCal kunde inte hitta Stockholm.',
-      )
-
-      return fallback
-    }
+    const location = new Location(
+      59.3293,
+      18.0686,
+      false,
+      'Europe/Stockholm',
+      'Stockholm, Sweden',
+      'SE',
+    )
 
     const events =
       HebrewCalendar.calendar({
@@ -74,6 +73,9 @@ export function getHebcalDayInfo(
 
       isRoshChodesh:
         events.some(isRoshChodeshEvent),
+
+      isShabbatMevarchim:
+        isShabbatMevarchimDate(date),
 
       isHoliday:
         events.some(isHolidayEvent),
@@ -175,6 +177,7 @@ function createFallbackInfo(
       date.getDay() === 5,
 
     isRoshChodesh: false,
+    isShabbatMevarchim: false,
     isHoliday: false,
     isErevHoliday: false,
 
@@ -217,6 +220,52 @@ function getParasha(
   )
 
   return event?.getDesc() ?? null
+}
+
+function isShabbatMevarchimDate(
+  date: Date,
+): boolean {
+  if (date.getDay() !== 6) {
+    return false
+  }
+
+  for (
+    let offset = 1;
+    offset <= 7;
+    offset += 1
+  ) {
+    const candidate = new Date(date)
+
+    candidate.setDate(
+      candidate.getDate() + offset,
+    )
+
+    const candidateInfo =
+      HebrewCalendar.calendar({
+        start: candidate,
+        end: candidate,
+      })
+
+    const hasRoshChodesh =
+      candidateInfo.some(
+        isRoshChodeshEvent,
+      )
+
+    if (!hasRoshChodesh) {
+      continue
+    }
+
+    /*
+     * Tishrei välsignas inte på Shabbat
+     * Mevarchim före Rosh Hashana.
+     */
+    const hebrewMonth =
+      new HDate(candidate).getMonth()
+
+    return hebrewMonth !== 7
+  }
+
+  return false
 }
 
 function getRoshChodeshName(

@@ -15,13 +15,14 @@ const weekdayNames = [
 
 export function generateStandardTfilot(
   startDate = new Date(),
+  daysToGenerate = DAYS_TO_GENERATE,
 ): Tefila[] {
   const generatedTfilot: Tefila[] = []
   const firstDate = startOfDay(startDate)
 
   for (
     let offset = 0;
-    offset < DAYS_TO_GENERATE;
+    offset < daysToGenerate;
     offset += 1
   ) {
     const currentDate = addDays(

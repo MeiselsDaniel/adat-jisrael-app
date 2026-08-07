@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import { saveEvent } from '../services/eventService'
+import {
+  saveTefila,
+  type TefilaRecord,
+} from '../services/tefilaService'
 import type { FormEvent } from 'react'
 import {
   ArrowLeft,
@@ -222,7 +226,26 @@ function NewEventPage({
     }
 
     try {
-      await saveEvent(newEvent)
+      const isTefila =
+        eventType === 'tefila' ||
+        eventType === 'jahrzeit'
+
+      if (isTefila) {
+        const tefilaRecord: TefilaRecord = {
+          id: newEvent.id,
+          title: newEvent.title,
+          date: newEvent.startDate,
+          time: newEvent.startTime,
+          status: 'scheduled',
+          allowRegistration:
+            newEvent.allowRegistration,
+        }
+
+        await saveTefila(tefilaRecord)
+      } else {
+        await saveEvent(newEvent)
+      }
+
       onSave(newEvent)
       setSaved(true)
     } catch (caughtError) {
@@ -550,7 +573,10 @@ function NewEventPage({
         {saved && (
           <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
             <Check className="h-5 w-5" />
-            Händelsen har sparats i Firebase.
+            {eventType === 'tefila' ||
+              eventType === 'jahrzeit'
+                ? 'Tfilan har sparats i Firebase.'
+                : 'Händelsen har sparats i Firebase.'}
           </div>
         )}
 

@@ -38,6 +38,7 @@ type AdminPageProps = {
   onCreateEvent: () => void
   onOpenTfilot: () => void
   onOpenEvents: () => void
+  onOpenKiddush: () => void
 }
 
 type UserFilter =
@@ -50,6 +51,7 @@ function AdminPage({
   onCreateEvent,
   onOpenTfilot,
   onOpenEvents,
+  onOpenKiddush,
 }: AdminPageProps) {
   const { firebaseUser } = useAuth()
 
@@ -443,6 +445,7 @@ function AdminPage({
             icon={<Wine className="h-6 w-6" />}
             title="Kiddush"
             description="Hantera bokningar och lediga datum"
+            onClick={onOpenKiddush}
           />
 
           <AdminMenuItem

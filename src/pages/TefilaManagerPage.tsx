@@ -29,7 +29,7 @@ type TefilaDayGroup = {
 }
 
 const standardTfilot =
-  generateStandardTfilot()
+  generateStandardTfilot(new Date(), 90)
 
 const upcomingTfilot =
   addKabbalatShabbat(standardTfilot)
@@ -158,7 +158,7 @@ function TefilaManagerPage({
 
           <div>
             <p className="font-bold text-[#183b70]">
-              Kommande två veckor
+              Kommande tre månader
             </p>
 
             <p className="mt-1 text-sm leading-6 text-slate-600">

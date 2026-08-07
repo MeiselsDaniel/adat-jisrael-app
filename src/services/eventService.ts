@@ -104,13 +104,13 @@ export async function getEventsBetween(
     collection(db, 'events'),
     where('startDate', '>=', startDate),
     where('startDate', '<=', endDate),
-    orderBy('startDate', 'asc'),
-    orderBy('startTime', 'asc'),
   )
 
   const snapshot = await getDocs(eventsQuery)
 
-  return snapshot.docs.map(mapEvent)
+  return snapshot.docs
+    .map(mapEvent)
+    .sort(compareStoredEvents)
 }
 
 /**
@@ -131,14 +131,16 @@ export function subscribeToEventsBetween(
     collection(db, 'events'),
     where('startDate', '>=', startDate),
     where('startDate', '<=', endDate),
-    orderBy('startDate', 'asc'),
-    orderBy('startTime', 'asc'),
   )
 
   return onSnapshot(
     eventsQuery,
     (snapshot) => {
-      callback(snapshot.docs.map(mapEvent))
+      callback(
+        snapshot.docs
+          .map(mapEvent)
+          .sort(compareStoredEvents),
+      )
     },
     (error) => {
       console.error(
@@ -254,6 +256,26 @@ function removeUndefinedValues(
         fieldValue !== undefined,
     ),
   )
+}
+
+function compareStoredEvents(
+  first: StoredAppEvent,
+  second: StoredAppEvent,
+): number {
+  const dateComparison =
+    first.startDate.localeCompare(
+      second.startDate,
+    )
+
+  if (dateComparison !== 0) {
+    return dateComparison
+  }
+
+  return first.startTime
+    .replace('.', ':')
+    .localeCompare(
+      second.startTime.replace('.', ':'),
+    )
 }
 
 function mapEvent(
