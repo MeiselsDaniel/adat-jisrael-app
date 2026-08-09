@@ -13,6 +13,8 @@ type MorePageProps = {
   user: AppUser
   onLogout: () => void
   openAdmin: () => void
+  openBoardContact: () => void
+  openProfile: () => void
 }
 
 const categoryNames = {
@@ -28,6 +30,8 @@ function MorePage({
   user,
   onLogout,
   openAdmin,
+  openBoardContact,
+  openProfile,
 }: MorePageProps) {
   return (
     <div className="space-y-5">
@@ -79,11 +83,13 @@ function MorePage({
         <MenuItem
           icon={<User className="h-5 w-5" />}
           label="Min profil"
+          onClick={openProfile}
         />
 
         <MenuItem
           icon={<CircleHelp className="h-5 w-5" />}
-          label="Kontakt och hjälp"
+          label="Styrelse & kontakt"
+          onClick={openBoardContact}
         />
       </section>
 
@@ -101,11 +107,20 @@ function MorePage({
 type MenuItemProps = {
   icon: ReactNode
   label: string
+  onClick?: () => void
 }
 
-function MenuItem({ icon, label }: MenuItemProps) {
+function MenuItem({
+  icon,
+  label,
+  onClick,
+}: MenuItemProps) {
   return (
-    <button className="flex w-full items-center gap-3 border-b border-slate-100 px-5 py-4 text-left last:border-0">
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 border-b border-slate-100 px-5 py-4 text-left last:border-0"
+    >
       <span className="text-[#183b70]">{icon}</span>
 
       <span className="flex-1 font-semibold">

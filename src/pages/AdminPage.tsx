@@ -38,6 +38,8 @@ type AdminPageProps = {
   onCreateEvent: () => void
   onOpenTfilot: () => void
   onOpenEvents: () => void
+  onOpenKiddush: () => void
+  onOpenNews: () => void
 }
 
 type UserFilter =
@@ -50,6 +52,8 @@ function AdminPage({
   onCreateEvent,
   onOpenTfilot,
   onOpenEvents,
+  onOpenKiddush,
+  onOpenNews,
 }: AdminPageProps) {
   const { firebaseUser } = useAuth()
 
@@ -164,8 +168,18 @@ function AdminPage({
   }
 
   function approveAsMember(uid: string) {
-    void runUserAction(uid, () =>
-      approveUserAsMember(uid),
+    void runUserAction(
+      uid,
+      async () => {
+        await approveUserAsMember(uid)
+
+        await updateUserProfile(
+          uid,
+          {
+            countsForMinyan: false,
+          },
+        )
+      },
     )
   }
 
@@ -175,6 +189,17 @@ function AdminPage({
   ) {
     void runUserAction(uid, () =>
       updateUserProfile(uid, { role }),
+    )
+  }
+
+  function changeMinyanEligibility(
+    uid: string,
+    countsForMinyan: boolean,
+  ) {
+    void runUserAction(uid, () =>
+      updateUserProfile(uid, {
+        countsForMinyan,
+      }),
     )
   }
 
@@ -393,6 +418,14 @@ function AdminPage({
                     onPromoteToAdmin={() =>
                       promoteToAdmin(user.uid)
                     }
+                    onChangeMinyanEligibility={(
+                      value,
+                    ) =>
+                      changeMinyanEligibility(
+                        user.uid,
+                        value,
+                      )
+                    }
                     onBlock={() =>
                       blockAccount(user.uid)
                     }
@@ -435,14 +468,16 @@ function AdminPage({
             icon={
               <FileText className="h-6 w-6" />
             }
-            title="Information"
+            title="Nyheter"
             description="Publicera nyheter och meddelanden"
+            onClick={onOpenNews}
           />
 
           <AdminMenuItem
             icon={<Wine className="h-6 w-6" />}
             title="Kiddush"
             description="Hantera bokningar och lediga datum"
+            onClick={onOpenKiddush}
           />
 
           <AdminMenuItem
@@ -513,6 +548,9 @@ type UserAdminCardProps = {
     role: FirebaseUserRole,
   ) => void
   onPromoteToAdmin: () => void
+  onChangeMinyanEligibility: (
+    value: boolean,
+  ) => void
   onBlock: () => void
   onRestore: () => void
 }
@@ -525,6 +563,7 @@ function UserAdminCard({
   onApproveAsMember,
   onChangeRole,
   onPromoteToAdmin,
+  onChangeMinyanEligibility,
   onBlock,
   onRestore,
 }: UserAdminCardProps) {
@@ -575,6 +614,21 @@ function UserAdminCard({
           <div className="mt-3 flex flex-wrap gap-2">
             <RoleBadge role={user.role} />
             <StatusBadge status={user.status} />
+
+            {user.status === 'approved' &&
+              user.role !== 'guest' && (
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                    user.countsForMinyan
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {user.countsForMinyan
+                    ? 'Räknas till minjan'
+                    : 'Ej minjan'}
+                </span>
+              )}
           </div>
         </div>
       </div>
@@ -637,6 +691,53 @@ function UserAdminCard({
 
           {actionsOpen && (
             <div className="mt-3 space-y-2">
+              <div className="rounded-2xl bg-sky-50 p-3 ring-1 ring-sky-100">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#183b70]">
+                    Minjan
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Styr om personen kan anmäla sig
+                    och räknas till minjan.
+                  </p>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() =>
+                        onChangeMinyanEligibility(
+                          true,
+                        )
+                      }
+                      className={`rounded-xl px-3 py-2.5 text-xs font-bold ${
+                        user.countsForMinyan
+                          ? 'bg-[#183b70] text-white'
+                          : 'bg-white text-slate-600 ring-1 ring-slate-200'
+                      }`}
+                    >
+                      Räknas till minjan
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() =>
+                        onChangeMinyanEligibility(
+                          false,
+                        )
+                      }
+                      className={`rounded-xl px-3 py-2.5 text-xs font-bold ${
+                        !user.countsForMinyan
+                          ? 'bg-slate-700 text-white'
+                          : 'bg-white text-slate-600 ring-1 ring-slate-200'
+                      }`}
+                    >
+                      Räknas inte
+                    </button>
+                  </div>
+                </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <RoleButton
                   label="Gäst"

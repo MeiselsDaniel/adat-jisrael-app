@@ -4,26 +4,28 @@ import {
 } from '@hebcal/core'
 import type {
   KiddushListItem,
-  KiddushStatus,
 } from '../components/KiddushCard'
 
-const NUMBER_OF_WEEKS = 52
+const NUMBER_OF_DAYS = 365
 
 export function generateKiddushDates(
   startDate = new Date(),
 ): KiddushListItem[] {
-  const firstSaturday = findNextSaturday(
-    startOfDay(startDate),
-  )
+  const start = startOfDay(startDate)
 
   const items: KiddushListItem[] = []
 
   for (
     let index = 0;
-    index < NUMBER_OF_WEEKS;
+    index < NUMBER_OF_DAYS;
     index += 1
   ) {
-    const date = addDays(firstSaturday, index * 7)
+    const date = addDays(start, index)
+
+    if (!isKiddushDate(date)) {
+      continue
+    }
+
     const dateValue = formatDateValue(date)
 
     items.push({
@@ -31,35 +33,73 @@ export function generateKiddushDates(
       date: formatLongSwedishDate(date),
       dateValue,
       occasion: getOccasionForDate(date),
-      status: getDemoStatus(index),
-      host: getDemoHost(index),
-      dedication: getDemoDedication(index),
+      status: 'available',
     })
   }
 
   return items
 }
 
-function getOccasionForDate(date: Date): string {
-  const events = HebrewCalendar.calendar({
-    start: date,
-    end: date,
-    sedrot: true,
-    noMinorFast: true,
-    noModern: true,
-  })
+function isKiddushDate(date: Date): boolean {
+  /*
+   * Varje Shabbat är ett Kiddushdatum.
+   */
+  if (date.getDay() === 6) {
+    return true
+  }
 
-  const holiday = events.find((event) => {
-    const eventFlags = event.getFlags()
+  const events = getHebcalEvents(date)
 
-    return Boolean(
-      eventFlags &
-        (flags.CHAG |
-          flags.CHOL_HAMOED |
-          flags.MAJOR_FAST),
+  /*
+   * Jom Tov-dagar får också Kiddushdatum.
+   *
+   * CHAG täcker bland annat:
+   * Rosh Hashana, Sukkot, Shemini Atzeret,
+   * Simchat Torah, Pesach och Shavuot.
+   */
+  const isYomTov = events.some((event) =>
+    Boolean(
+      event.getFlags() & flags.CHAG,
+    ),
+  )
+
+  if (!isYomTov) {
+    return false
+  }
+
+  /*
+   * Yom Kippur har självklart ingen Kiddush.
+   */
+  const names = events.map((event) =>
+    event.render('en').toLowerCase(),
+  )
+
+  if (
+    names.some((name) =>
+      name.includes('yom kippur'),
     )
-  })
+  ) {
+    return false
+  }
 
+  return true
+}
+
+function getOccasionForDate(
+  date: Date,
+): string {
+  const events = getHebcalEvents(date)
+
+  const holiday = events.find((event) =>
+    Boolean(
+      event.getFlags() & flags.CHAG,
+    ),
+  )
+
+  /*
+   * På en vanlig Shabbat vill vi visa parashan.
+   * På Jom Tov vill vi visa högtiden.
+   */
   if (holiday) {
     return formatOccasionName(
       holiday.render('en'),
@@ -68,7 +108,8 @@ function getOccasionForDate(date: Date): string {
 
   const parasha = events.find((event) =>
     Boolean(
-      event.getFlags() & flags.PARSHA_HASHAVUA,
+      event.getFlags() &
+        flags.PARSHA_HASHAVUA,
     ),
   )
 
@@ -81,35 +122,68 @@ function getOccasionForDate(date: Date): string {
   return 'Shabbat'
 }
 
-function formatOccasionName(value: string): string {
-  return value
-    .replace(/^Parashat\s+/i, 'Parashat ')
-    .replace(/Rosh Hashana/gi, 'Rosh Hashana')
-    .replace(/Yom Kippur/gi, 'Yom Kippur')
-    .replace(/Sukkot/gi, 'Sukkot')
-    .replace(/Shmini Atzeret/gi, 'Shemini Atzeret')
-    .replace(/Simchat Torah/gi, 'Simchat Torah')
-    .replace(/Pesach/gi, 'Pesach')
-    .replace(/Shavuot/gi, 'Shavuot')
-    .replace(/Tish'a B'Av/gi, "Tisha B'Av")
+function getHebcalEvents(
+  date: Date,
+) {
+  return HebrewCalendar.calendar({
+    start: date,
+    end: date,
+
+    /*
+     * Adat Jisrael följer diasporakalender,
+     * därför ska andra dagen Jom Tov finnas.
+     */
+    il: false,
+
+    sedrot: true,
+    noMinorFast: true,
+    noModern: true,
+  })
 }
 
-function startOfDay(date: Date): Date {
+function formatOccasionName(
+  value: string,
+): string {
+  return value
+    .replace(
+      /^Parashat\s+/i,
+      'Parashat ',
+    )
+    .replace(
+      /Rosh Hashana/gi,
+      'Rosh Hashana',
+    )
+    .replace(
+      /Yom Kippur/gi,
+      'Yom Kippur',
+    )
+    .replace(
+      /Sukkot/gi,
+      'Sukkot',
+    )
+    .replace(
+      /Shmini Atzeret/gi,
+      'Shemini Atzeret',
+    )
+    .replace(
+      /Simchat Torah/gi,
+      'Simchat Torah',
+    )
+    .replace(
+      /Pesach/gi,
+      'Pesach',
+    )
+    .replace(
+      /Shavuot/gi,
+      'Shavuot',
+    )
+}
+
+function startOfDay(
+  date: Date,
+): Date {
   const result = new Date(date)
   result.setHours(0, 0, 0, 0)
-
-  return result
-}
-
-function findNextSaturday(date: Date): Date {
-  const result = new Date(date)
-
-  const daysUntilSaturday =
-    (6 - result.getDay() + 7) % 7
-
-  result.setDate(
-    result.getDate() + daysUntilSaturday,
-  )
 
   return result
 }
@@ -119,20 +193,27 @@ function addDays(
   numberOfDays: number,
 ): Date {
   const result = new Date(date)
-  result.setDate(result.getDate() + numberOfDays)
+
+  result.setDate(
+    result.getDate() + numberOfDays,
+  )
 
   return result
 }
 
-function formatDateValue(date: Date): string {
-  const year = date.getFullYear()
+function formatDateValue(
+  date: Date,
+): string {
+  const year =
+    date.getFullYear()
+
   const month = String(
     date.getMonth() + 1,
   ).padStart(2, '0')
-  const day = String(date.getDate()).padStart(
-    2,
-    '0',
-  )
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0')
 
   return `${year}-${month}-${day}`
 }
@@ -140,60 +221,13 @@ function formatDateValue(date: Date): string {
 function formatLongSwedishDate(
   date: Date,
 ): string {
-  return new Intl.DateTimeFormat('sv-SE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(date)
-}
-
-/*
- * Tillfälliga exempelbokningar.
- * Dessa ersätts senare av bokningar från Firestore.
- */
-function getDemoStatus(
-  index: number,
-): KiddushStatus {
-  if (index === 1 || index === 5) {
-    return 'booked'
-  }
-
-  if (index === 3) {
-    return 'pending'
-  }
-
-  return 'available'
-}
-
-function getDemoHost(
-  index: number,
-): string | undefined {
-  if (index === 1) {
-    return 'Familjen Cohen'
-  }
-
-  if (index === 3) {
-    return 'Familjen Levi'
-  }
-
-  if (index === 5) {
-    return 'Familjen Fried'
-  }
-
-  return undefined
-}
-
-function getDemoDedication(
-  index: number,
-): string | undefined {
-  if (index === 1) {
-    return 'Till minne av en älskad familjemedlem.'
-  }
-
-  if (index === 5) {
-    return 'Med anledning av en födelsedag.'
-  }
-
-  return undefined
+  return new Intl.DateTimeFormat(
+    'sv-SE',
+    {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    },
+  ).format(date)
 }

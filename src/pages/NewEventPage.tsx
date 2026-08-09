@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import { saveEvent } from '../services/eventService'
+import {
+  saveTefila,
+  type TefilaRecord,
+} from '../services/tefilaService'
 import type { FormEvent } from 'react'
 import {
   ArrowLeft,
@@ -8,6 +12,7 @@ import {
   Check,
   Clock,
   Eye,
+  ImagePlus,
   MapPin,
   Repeat2,
   Save,
@@ -19,46 +24,143 @@ import type {
   EventVisibility,
   RecurrenceType,
 } from '../types'
+import { synagogueSettings } from '../data/settings'
+import { uploadEventImage } from '../services/imageUploadService'
+import type { StoredAppEvent } from '../services/eventService'
 
 type NewEventPageProps = {
   currentUserId: string
+  initialEvent?: StoredAppEvent | null
   onBack: () => void
   onSave: (event: AppEvent) => void
 }
 
-const eventTypeNames: Record<EventType, string> = {
+const eventTypeNames: Partial<
+  Record<EventType, string>
+> = {
   tefila: 'Tefila',
   jahrzeit: 'Jahrzeit',
-  kiddush: 'Kiddush',
   shiur: 'Shiur',
-  activity: 'Aktivitet',
+  activity: 'Fest',
   holiday: 'Högtid',
   meeting: 'Möte',
   other: 'Annat',
 }
 
+function supportsRichEvent(
+  type: EventType,
+): boolean {
+  return (
+    type === 'activity' ||
+    type === 'shiur' ||
+    type === 'meeting' ||
+    type === 'holiday' ||
+    type === 'other'
+  )
+}
+
+function supportsEventPricing(
+  type: EventType,
+): boolean {
+  return (
+    type === 'activity' ||
+    type === 'shiur' ||
+    type === 'meeting' ||
+    type === 'other'
+  )
+}
+
 function NewEventPage({
   currentUserId,
+  initialEvent,
   onBack,
   onSave,
 }: NewEventPageProps) {
   const [eventType, setEventType] =
-    useState<EventType>('tefila')
+    useState<EventType>(
+      initialEvent?.type ?? 'tefila',
+    )
 
-  const [title, setTitle] = useState('Shacharit')
-  const [description, setDescription] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [location, setLocation] = useState('Adat Jisrael')
+  const [title, setTitle] = useState(
+    initialEvent?.title ?? 'Shacharit',
+  )
+  const [description, setDescription] = useState(
+    initialEvent?.description ?? '',
+  )
+  const [startDate, setStartDate] = useState(
+    initialEvent?.startDate ?? '',
+  )
+  const [startTime, setStartTime] = useState(
+    initialEvent?.startTime ?? '',
+  )
+  const [endTime, setEndTime] = useState(
+    initialEvent?.endTime ?? '',
+  )
+  const [location, setLocation] = useState(
+    initialEvent?.location ?? 'Adat Jisrael',
+  )
+
+  const [imageUrl, setImageUrl] =
+    useState(initialEvent?.imageUrl ?? '')
+
+  const [imageUploading, setImageUploading] =
+    useState(false)
+
+  const [imageError, setImageError] =
+    useState('')
+
+  const [memberPrice, setMemberPrice] =
+    useState(
+      initialEvent?.memberPrice !== undefined
+        ? String(initialEvent.memberPrice)
+        : '',
+    )
+
+  const [nonMemberPrice, setNonMemberPrice] =
+    useState(
+      initialEvent?.nonMemberPrice !== undefined
+        ? String(initialEvent.nonMemberPrice)
+        : '',
+    )
+
+  const [swishNumber, setSwishNumber] =
+    useState(
+      initialEvent?.swishNumber ??
+        synagogueSettings.swish.number,
+    )
+
+  const [swishMessage, setSwishMessage] =
+    useState(initialEvent?.swishMessage ?? '')
+
+  const [
+    registrationDeadline,
+    setRegistrationDeadline,
+  ] = useState(
+    initialEvent?.registrationDeadline ?? '',
+  )
+
+  const [
+    maxParticipants,
+    setMaxParticipants,
+  ] = useState(
+    initialEvent?.maxParticipants !== undefined
+      ? String(initialEvent.maxParticipants)
+      : '',
+  )
 
   const [visibility, setVisibility] =
     useState<EventVisibility>('allRegistered')
 
-  const [showOnHome, setShowOnHome] = useState(true)
-  const [showInCalendar, setShowInCalendar] = useState(true)
+  const [showOnHome, setShowOnHome] = useState(
+    initialEvent?.showOnHome ?? true,
+  )
+  const [showInCalendar, setShowInCalendar] = useState(
+    initialEvent?.showInCalendar ?? true,
+  )
   const [allowRegistration, setAllowRegistration] =
-    useState(true)
+    useState(
+      initialEvent?.allowRegistration ?? true,
+    )
   const [showAttendeeCount, setShowAttendeeCount] =
     useState(true)
   const [showAttendeeNames, setShowAttendeeNames] =
@@ -102,40 +204,80 @@ function NewEventPage({
       setShowOnHome(true)
     }
 
-    if (nextType === 'kiddush') {
-      setTitle('Kiddush')
-      setAllowRegistration(false)
-      setShowOnHome(false)
-    }
-
     if (nextType === 'shiur') {
       setTitle('Shiur')
       setAllowRegistration(true)
-      setShowOnHome(false)
+      setShowOnHome(true)
     }
 
     if (nextType === 'activity') {
       setTitle('')
       setAllowRegistration(true)
-      setShowOnHome(false)
+      setShowOnHome(true)
+
+      setSwishNumber(
+        synagogueSettings.swish.number,
+      )
+
+      setSwishMessage('')
     }
 
     if (nextType === 'holiday') {
       setTitle('')
       setAllowRegistration(false)
-      setShowOnHome(false)
+      setShowOnHome(true)
     }
 
     if (nextType === 'meeting') {
       setTitle('')
       setAllowRegistration(true)
-      setShowOnHome(false)
+      setShowOnHome(true)
     }
 
     if (nextType === 'other') {
       setTitle('')
       setAllowRegistration(false)
-      setShowOnHome(false)
+      setShowOnHome(true)
+    }
+  }
+
+  async function handleImageFile(
+    file: File | null,
+  ) {
+    if (!file) {
+      return
+    }
+
+    setImageUploading(true)
+    setImageError('')
+
+    try {
+      const eventId =
+        initialEvent?.id ??
+        crypto.randomUUID()
+
+      const uploadedUrl =
+        await uploadEventImage(
+          file,
+          eventId,
+        )
+
+      setImageUrl(
+        uploadedUrl,
+      )
+    } catch (caughtError) {
+      console.error(
+        'Kunde inte ladda upp bild:',
+        caughtError,
+      )
+
+      setImageError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Bilden kunde inte laddas upp.',
+      )
+    } finally {
+      setImageUploading(false)
     }
   }
 
@@ -162,7 +304,9 @@ function NewEventPage({
     }
 
     const newEvent: AppEvent = {
-      id: crypto.randomUUID(),
+      id:
+        initialEvent?.id ??
+        crypto.randomUUID(),
       type: eventType,
       title: title.trim(),
       description: description.trim() || undefined,
@@ -170,6 +314,49 @@ function NewEventPage({
       startTime,
       endTime: endTime || undefined,
       location: location.trim() || undefined,
+
+      imageUrl:
+        eventType === 'activity' &&
+        imageUrl.trim()
+          ? imageUrl.trim()
+          : undefined,
+
+      memberPrice:
+        supportsEventPricing(eventType) &&
+        memberPrice.trim()
+          ? Number(memberPrice)
+          : undefined,
+
+      nonMemberPrice:
+        supportsEventPricing(eventType) &&
+        nonMemberPrice.trim()
+          ? Number(nonMemberPrice)
+          : undefined,
+
+      swishNumber:
+        supportsEventPricing(eventType) &&
+        swishNumber.trim()
+          ? swishNumber.trim()
+          : undefined,
+
+      swishMessage:
+        supportsEventPricing(eventType) &&
+        swishMessage.trim()
+          ? swishMessage.trim()
+          : undefined,
+
+      registrationDeadline:
+        supportsRichEvent(eventType) &&
+        registrationDeadline
+          ? registrationDeadline
+          : undefined,
+
+      maxParticipants:
+        supportsRichEvent(eventType) &&
+        maxParticipants.trim()
+          ? Number(maxParticipants)
+          : undefined,
+
       visibility,
       status: 'published',
       showOnHome,
@@ -185,8 +372,13 @@ function NewEventPage({
         recurrence !== 'none' && recurrenceEndDate
           ? recurrenceEndDate
           : undefined,
-      createdAt: new Date().toISOString(),
-      createdBy: currentUserId,
+      createdAt:
+        typeof initialEvent?.createdAt === 'string'
+          ? initialEvent.createdAt
+          : new Date().toISOString(),
+      createdBy:
+        initialEvent?.createdBy ??
+        currentUserId,
 
       memorialName:
         eventType === 'jahrzeit' && memorialName.trim()
@@ -222,7 +414,26 @@ function NewEventPage({
     }
 
     try {
-      await saveEvent(newEvent)
+      const isTefila =
+        eventType === 'tefila' ||
+        eventType === 'jahrzeit'
+
+      if (isTefila) {
+        const tefilaRecord: TefilaRecord = {
+          id: newEvent.id,
+          title: newEvent.title,
+          date: newEvent.startDate,
+          time: newEvent.startTime,
+          status: 'scheduled',
+          allowRegistration:
+            newEvent.allowRegistration,
+        }
+
+        await saveTefila(tefilaRecord)
+      } else {
+        await saveEvent(newEvent)
+      }
+
       onSave(newEvent)
       setSaved(true)
     } catch (caughtError) {
@@ -255,7 +466,9 @@ function NewEventPage({
           </p>
 
           <h1 className="text-2xl font-bold text-[#183b70]">
-            Ny händelse
+            {initialEvent
+              ? 'Redigera händelse'
+              : 'Ny händelse'}
           </h1>
         </div>
       </header>
@@ -305,6 +518,169 @@ function NewEventPage({
               className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
             />
           </Field>
+
+          {supportsRichEvent(eventType) && (
+            <>
+              {eventType === 'activity' && (
+                <Field label="Bild">
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-bold text-[#183b70] transition hover:bg-slate-100">
+                  <ImagePlus className="h-5 w-5" />
+
+                  {imageUploading
+                    ? 'Laddar upp…'
+                    : imageUrl
+                      ? 'Byt bild'
+                      : 'Välj bild'}
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={imageUploading}
+                    onChange={(event) => {
+                      const file =
+                        event.target.files?.[0] ??
+                        null
+
+                      void handleImageFile(
+                        file,
+                      )
+
+                      event.target.value = ''
+                    }}
+                    className="hidden"
+                  />
+                </label>
+
+                {imageError && (
+                  <p className="mt-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+                    {imageError}
+                  </p>
+                )}
+
+                {imageUrl && (
+                  <div className="mt-3 overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200">
+                    <img
+                      src={imageUrl}
+                      alt="Förhandsvisning"
+                      className="h-44 w-full object-cover"
+                    />
+
+                    <div className="p-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setImageUrl('')
+                        }
+                        className="text-sm font-bold text-rose-700"
+                      >
+                        Ta bort bild
+                      </button>
+                    </div>
+                  </div>
+                )}
+                </Field>
+              )}
+
+              {supportsEventPricing(eventType) && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                <Field label="Pris medlem">
+                  <input
+                    value={memberPrice}
+                    onChange={(event) =>
+                      setMemberPrice(
+                        event.target.value,
+                      )
+                    }
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="250"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+                  />
+                </Field>
+
+                <Field label="Pris icke medlem">
+                  <input
+                    value={nonMemberPrice}
+                    onChange={(event) =>
+                      setNonMemberPrice(
+                        event.target.value,
+                      )
+                    }
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="350"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Swish-nummer">
+                <input
+                  value={swishNumber}
+                  onChange={(event) =>
+                    setSwishNumber(
+                      event.target.value,
+                    )
+                  }
+                  type="text"
+                  placeholder="123 456 78 90"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+                />
+              </Field>
+
+              <Field label="Swish-meddelande">
+                <input
+                  value={swishMessage}
+                  onChange={(event) =>
+                    setSwishMessage(
+                      event.target.value,
+                    )
+                  }
+                  type="text"
+                  placeholder="Exempel: Chanukafest"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+                />
+              </Field>
+
+                </>
+              )}
+
+              <Field label="Sista anmälningsdag">
+                <input
+                  value={
+                    registrationDeadline
+                  }
+                  onChange={(event) =>
+                    setRegistrationDeadline(
+                      event.target.value,
+                    )
+                  }
+                  type="date"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+                />
+              </Field>
+
+              <Field label="Max antal deltagare">
+                <input
+                  value={maxParticipants}
+                  onChange={(event) =>
+                    setMaxParticipants(
+                      event.target.value,
+                    )
+                  }
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="Lämna tomt för obegränsat"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+                />
+              </Field>
+            </>
+          )}
+
         </FormSection>
 
         <FormSection title="Datum och tid">
@@ -550,7 +926,10 @@ function NewEventPage({
         {saved && (
           <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
             <Check className="h-5 w-5" />
-            Händelsen har sparats i Firebase.
+            {eventType === 'tefila' ||
+              eventType === 'jahrzeit'
+                ? 'Tfilan har sparats i Firebase.'
+                : 'Händelsen har sparats i Firebase.'}
           </div>
         )}
 

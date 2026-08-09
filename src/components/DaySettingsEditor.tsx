@@ -6,6 +6,8 @@ import {
   Settings,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { getHebcalDayInfo } from '../services/hebcalService'
+import { getDefaultSermon } from '../utils/getDefaultSermon'
 import {
   saveDaySettings,
   subscribeToDaySettings,
@@ -24,6 +26,13 @@ function DaySettingsEditor({
   const defaultDayType =
     getDefaultDayType(dateValue)
 
+
+  const hebcalInfo =
+    getHebcalDayInfo(dateValue)
+
+  const defaultSermon =
+    getDefaultSermon(dateValue)
+
   const [open, setOpen] = useState(false)
   const [dayType, setDayType] =
     useState<DayType>(defaultDayType)
@@ -36,6 +45,11 @@ function DaySettingsEditor({
 
   const [comment, setComment] =
     useState('')
+
+  const [
+    moreInformation,
+    setMoreInformation,
+  ] = useState('')
 
   const [
     customCandleLightingTime,
@@ -55,6 +69,11 @@ function DaySettingsEditor({
   const [
     showHavdala,
     setShowHavdala,
+  ] = useState(true)
+
+  const [
+    showMincha,
+    setShowMincha,
   ] = useState(true)
 
   const [saving, setSaving] =
@@ -87,6 +106,11 @@ function DaySettingsEditor({
           settings?.comment ?? '',
         )
 
+        setMoreInformation(
+          settings?.moreInformation ??
+            '',
+        )
+
         setCustomCandleLightingTime(
           settings?.customCandleLightingTime ??
             '',
@@ -104,6 +128,11 @@ function DaySettingsEditor({
 
         setShowHavdala(
           settings?.showHavdala ??
+            true,
+        )
+
+        setShowMincha(
+          settings?.showMincha ??
             true,
         )
       },
@@ -133,10 +162,12 @@ function DaySettingsEditor({
         holidayName,
         sermon,
         comment,
+        moreInformation,
         customCandleLightingTime,
         customHavdalaTime,
         showCandleLighting,
         showHavdala,
+        showMincha,
         updatedBy: firebaseUser.uid,
       })
 
@@ -156,7 +187,9 @@ function DaySettingsEditor({
 
   return (
     <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
-      <button
+
+
+<button
         type="button"
         onClick={() =>
           setOpen((current) => !current)
@@ -175,6 +208,44 @@ function DaySettingsEditor({
           <p className="mt-1 text-xs text-slate-500">
             {getDayTypeLabel(dayType)}
           </p>
+
+          {hebcalInfo.isShabbatMevarchim && (
+            <p className="mt-1 text-xs font-bold text-[#68123f]">
+              Shabbat Mevarchim
+            </p>
+          )}
+
+          {hebcalInfo.roshChodeshName && (
+            <p className="mt-1 text-xs font-bold text-[#68123f]">
+              {hebcalInfo.roshChodeshName}
+            </p>
+          )}
+
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-slate-600">
+            {showCandleLighting &&
+              (
+                customCandleLightingTime ||
+                hebcalInfo.candleLightingTime
+              ) && (
+                <span>
+                  Ljuständning{' '}
+                  {customCandleLightingTime ||
+                    hebcalInfo.candleLightingTime}
+                </span>
+              )}
+
+            {showHavdala &&
+              (
+                customHavdalaTime ||
+                hebcalInfo.havdalaTime
+              ) && (
+                <span>
+                  Havdala{' '}
+                  {customHavdalaTime ||
+                    hebcalInfo.havdalaTime}
+                </span>
+              )}
+          </div>
         </div>
 
         {open ? (
@@ -186,6 +257,31 @@ function DaySettingsEditor({
 
       {open && (
         <div className="space-y-5 border-t border-slate-100 p-4">
+          {(dayType === 'shabbat' ||
+            dayType === 'holiday' ||
+            dayType === 'shabbatHoliday') && (
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">
+                Mer information (visas i appen)
+              </span>
+
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Exempelvis Molad, shiur, gästchazan eller annan praktisk information.
+              </p>
+
+              <textarea
+                value={moreInformation}
+                onChange={(event) =>
+                  setMoreInformation(
+                    event.target.value,
+                  )
+                }
+                rows={5}
+                placeholder="Exempel: Molad: söndag 14.32 och 7 chalakim."
+                className="mt-2 w-full resize-y rounded-2xl border border-slate-200 px-4 py-3 text-sm leading-6"
+              />
+            </label>
+          )}
           <div>
             <p className="text-sm font-bold text-slate-700">
               Typ av dag
@@ -261,7 +357,29 @@ function DaySettingsEditor({
           />
 
           {showCandleLighting && (
-            <TimeInput
+            <div className="space-y-2">
+              {(
+                customCandleLightingTime ||
+                hebcalInfo.candleLightingTime
+              ) && (
+                <p className="rounded-2xl bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800">
+                  Nuvarande ljuständning:{' '}
+                  <strong>
+                    {customCandleLightingTime ||
+                      hebcalInfo.candleLightingTime}
+                  </strong>
+                  {customCandleLightingTime &&
+                    hebcalInfo.candleLightingTime &&
+                    customCandleLightingTime !==
+                      hebcalInfo.candleLightingTime && (
+                      <span className="mt-1 block text-xs font-medium text-sky-700">
+                        HebCal: {hebcalInfo.candleLightingTime}
+                      </span>
+                    )}
+                </p>
+              )}
+
+              <TimeInput
               label="Egen ljuständningstid"
               value={
                 customCandleLightingTime
@@ -270,7 +388,14 @@ function DaySettingsEditor({
                 setCustomCandleLightingTime
               }
             />
+            </div>
           )}
+
+          <Toggle
+            label="Visa Mincha"
+            checked={showMincha}
+            onChange={setShowMincha}
+          />
 
           <Toggle
             label="Visa Havdala"
@@ -279,16 +404,56 @@ function DaySettingsEditor({
           />
 
           {showHavdala && (
-            <TimeInput
+            <div className="space-y-2">
+              {(
+                customHavdalaTime ||
+                hebcalInfo.havdalaTime
+              ) && (
+                <p className="rounded-2xl bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800">
+                  Nuvarande Havdala:{' '}
+                  <strong>
+                    {customHavdalaTime ||
+                      hebcalInfo.havdalaTime}
+                  </strong>
+                  {customHavdalaTime &&
+                    hebcalInfo.havdalaTime &&
+                    customHavdalaTime !==
+                      hebcalInfo.havdalaTime && (
+                      <span className="mt-1 block text-xs font-medium text-sky-700">
+                        HebCal: {hebcalInfo.havdalaTime}
+                      </span>
+                    )}
+                </p>
+              )}
+
+              <TimeInput
               label="Egen Havdala-tid"
               value={customHavdalaTime}
               onChange={
                 setCustomHavdalaTime
               }
             />
+            </div>
           )}
 
-          <label className="block">
+                    {defaultSermon && (
+            <div className="rounded-2xl bg-sky-50 px-4 py-3 ring-1 ring-sky-100">
+              <p className="text-xs font-bold uppercase tracking-wide text-sky-700">
+                Ordinarie predikoschema
+              </p>
+
+              <p className="mt-1 font-bold text-[#183b70]">
+                {defaultSermon}
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Lämna predikantfältet tomt för att använda ordinarie schema.
+                Skriv ett namn nedan endast om denna Shabbat avviker.
+              </p>
+            </div>
+          )}
+
+<label className="block">
             <span className="text-sm font-bold text-slate-700">
               Predikan eller talare
             </span>
@@ -424,6 +589,7 @@ function TimeInput({
       <span className="text-sm font-bold text-slate-700">
         {label}
       </span>
+
 
       <input
         type="time"

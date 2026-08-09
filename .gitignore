@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Lokala backupfiler skapade under utveckling
+*.before-*
+
+# Firebase Agent Skills – behövs inte för appen
+.agents/
+skills-lock.json

@@ -6,13 +6,18 @@ import { useAuth } from './hooks/useAuth'
 import AdminPage from './pages/AdminPage'
 import CalendarPage from './pages/CalendarPage'
 import EventManagerPage from './pages/EventManagerPage'
+import type { StoredAppEvent } from './services/eventService'
 import HomePage from './pages/HomePage'
 import InformationPage from './pages/InformationPage'
 import KiddushPage from './pages/KiddushPage'
+import KiddushAdminPage from './pages/KiddushAdminPage'
 import LoginPage from './pages/LoginPage'
 import MembershipPage from './pages/MembershipPage'
 import MorePage from './pages/MorePage'
+import ProfilePage from './pages/ProfilePage'
+import BoardContactPage from './pages/BoardContactPage'
 import NewEventPage from './pages/NewEventPage'
+import NewsAdminPage from './pages/NewsAdminPage'
 import PendingApprovalPage from './pages/PendingApprovalPage'
 import TefilaManagerPage from './pages/TefilaManagerPage'
 import type {
@@ -30,6 +35,8 @@ type AdminView =
   | 'dashboard'
   | 'tfilot'
   | 'events'
+  | 'kiddush'
+  | 'news'
   | 'newEvent'
 
 function App() {
@@ -49,6 +56,9 @@ function App() {
 
   const [, setCreatedEvents] =
     useState<AppEvent[]>([])
+
+  const [editingEvent, setEditingEvent] =
+    useState<StoredAppEvent | null>(null)
 
   const currentUser = useMemo(
     () =>
@@ -119,18 +129,25 @@ function App() {
   if (adminOpen) {
     return (
       <div className="min-h-screen bg-slate-100 text-slate-900">
-        <div className="mx-auto min-h-screen w-full max-w-md bg-[#f8fafc] px-4 py-5 shadow-xl">
+        <div className="mx-auto min-h-screen w-full max-w-md bg-[#f8fafc] px-4 pb-28 pt-5 shadow-xl">
           {adminView === 'dashboard' && (
             <AdminPage
               onBack={closeAdmin}
-              onCreateEvent={() =>
+              onCreateEvent={() => {
+                setEditingEvent(null)
                 setAdminView('newEvent')
-              }
+              }}
               onOpenTfilot={() =>
                 setAdminView('tfilot')
               }
               onOpenEvents={() =>
                 setAdminView('events')
+              }
+              onOpenKiddush={() =>
+                setAdminView('kiddush')
+              }
+              onOpenNews={() =>
+                setAdminView('news')
               }
             />
           )}
@@ -148,21 +165,37 @@ function App() {
               onBack={() =>
                 setAdminView('dashboard')
               }
-              onCreateEvent={() =>
+              onCreateEvent={() => {
+                setEditingEvent(null)
                 setAdminView('newEvent')
-              }
-              onEditEvent={(event) => {
-                console.log(
-                  'Redigering kopplas in i nästa steg:',
-                  event,
-                )
               }}
+              onEditEvent={(event) => {
+                setEditingEvent(event)
+                setAdminView('newEvent')
+              }}
+            />
+          )}
+
+          {adminView === 'kiddush' && (
+            <KiddushAdminPage
+              onBack={() =>
+                setAdminView('dashboard')
+              }
+            />
+          )}
+
+          {adminView === 'news' && (
+            <NewsAdminPage
+              onBack={() =>
+                setAdminView('dashboard')
+              }
             />
           )}
 
           {adminView === 'newEvent' && (
             <NewEventPage
               currentUserId={currentUser.id}
+              initialEvent={editingEvent}
               onBack={() =>
                 setAdminView('dashboard')
               }
@@ -170,6 +203,16 @@ function App() {
             />
           )}
         </div>
+
+        <BottomNavigation
+          page={page}
+          user={currentUser}
+          setPage={(nextPage) => {
+            setPage(nextPage)
+            setAdminOpen(false)
+            setAdminView('dashboard')
+          }}
+        />
       </div>
     )
   }
@@ -183,18 +226,14 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-[#f8fafc] shadow-xl">
-        <Header page={page} />
+        <Header
+          page={page}
+          userName={currentUser.name}
+        />
 
         <main className="flex-1 px-4 pb-28 pt-5">
           {page === 'home' && (
-            <HomePage
-              showMemberInformation={
-                canAccessMemberInformation
-              }
-              openInformation={() =>
-                setPage('information')
-              }
-            />
+            <HomePage />
           )}
 
           {page === 'calendar' && (
@@ -235,6 +274,29 @@ function App() {
               user={currentUser}
               onLogout={handleLogout}
               openAdmin={openAdmin}
+              openBoardContact={() =>
+                setPage('boardContact')
+              }
+              openProfile={() =>
+                setPage('profile')
+              }
+            />
+          )}
+
+          {page === 'boardContact' && (
+            <BoardContactPage
+              onBack={() =>
+                setPage('more')
+              }
+            />
+          )}
+
+
+          {page === 'profile' && (
+            <ProfilePage
+              onBack={() =>
+                setPage('more')
+              }
             />
           )}
         </main>

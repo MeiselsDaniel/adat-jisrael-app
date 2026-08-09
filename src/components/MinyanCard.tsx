@@ -28,10 +28,15 @@ type MinyanCardProps = {
   currentGuestComment?: string
   loading?: boolean
   cancelled?: boolean
+  canRegister?: boolean
   completed?: boolean
   minyanResult?: MinyanResult
   actualAttendance?: number
   canManage?: boolean
+  extraInfo?: {
+    label: string
+    value: string
+  }
   onRegister: (
     guestCount: number,
     guestComment?: string,
@@ -54,10 +59,12 @@ function MinyanCard({
   currentGuestComment,
   loading = false,
   cancelled = false,
+  canRegister = true,
   completed = false,
   minyanResult,
   actualAttendance,
   canManage = false,
+  extraInfo,
   onRegister,
   onUnregister,
   onCancel,
@@ -308,6 +315,18 @@ function MinyanCard({
               {tefila.date}
             </p>
 
+            {extraInfo && (
+              <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
+                <span aria-hidden="true">🕯️</span>
+                <span>
+                  {extraInfo.label}
+                </span>
+                <span className="font-bold text-slate-900">
+                  {extraInfo.value}
+                </span>
+              </p>
+            )}
+
             <p
               className={`mt-3 font-bold ${
                 isKabbalatShabbat
@@ -322,6 +341,7 @@ function MinyanCard({
               <Clock className="h-4 w-4" />
               {tefila.time}
             </p>
+
           </div>
 
           <div>
@@ -371,8 +391,9 @@ function MinyanCard({
         </div>
       )}
 
-      <div className="px-4 pb-4">
-        <div className="grid grid-cols-2 gap-2">
+      {canRegister && (
+        <div className="px-4 pb-4">
+          <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             disabled={
@@ -428,7 +449,9 @@ function MinyanCard({
             {error}
           </p>
         )}
-      </div>
+        </div>
+      )}
+
 
       {detailsOpen && (
         <div className="border-t border-slate-100 bg-slate-50 px-4 py-4">
@@ -564,7 +587,8 @@ function MinyanCard({
         </div>
       )}
 
-      {guestFormOpen && (
+      {canRegister &&
+        guestFormOpen && (
         <div className="border-t border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div>

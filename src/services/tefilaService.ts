@@ -169,13 +169,13 @@ export async function getTfilotBetween(
     collection(db, 'tfilot'),
     where('date', '>=', startDate),
     where('date', '<=', endDate),
-    orderBy('date', 'asc'),
-    orderBy('time', 'asc'),
   )
 
   const snapshot = await getDocs(tfilotQuery)
 
-  return snapshot.docs.map(mapTefila)
+  return snapshot.docs
+    .map(mapTefila)
+    .sort(compareTefilaRecords)
 }
 
 export function subscribeToTfilotBetween(
@@ -188,14 +188,16 @@ export function subscribeToTfilotBetween(
     collection(db, 'tfilot'),
     where('date', '>=', startDate),
     where('date', '<=', endDate),
-    orderBy('date', 'asc'),
-    orderBy('time', 'asc'),
   )
 
   return onSnapshot(
     tfilotQuery,
     (snapshot) => {
-      callback(snapshot.docs.map(mapTefila))
+      callback(
+        snapshot.docs
+          .map(mapTefila)
+          .sort(compareTefilaRecords),
+      )
     },
     (error) => {
       console.error(
@@ -419,6 +421,24 @@ export async function confirmMinyan({
       merge: true,
     },
   )
+}
+
+function compareTefilaRecords(
+  first: TefilaRecord,
+  second: TefilaRecord,
+): number {
+  const dateComparison =
+    first.date.localeCompare(second.date)
+
+  if (dateComparison !== 0) {
+    return dateComparison
+  }
+
+  return first.time
+    .replace('.', ':')
+    .localeCompare(
+      second.time.replace('.', ':'),
+    )
 }
 
 function mapTefila(

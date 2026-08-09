@@ -137,18 +137,21 @@ export const eventRegistrations: EventRegistration[] = [
     id: 'registration-1',
     eventId: 'event-shacharit-monday',
     userId: 'user-daniel',
+    partySize: 1,
     registeredAt: '2026-08-05T12:15:00+02:00',
   },
   {
     id: 'registration-2',
     eventId: 'event-shacharit-monday',
     userId: 'user-member',
+    partySize: 1,
     registeredAt: '2026-08-05T12:20:00+02:00',
   },
   {
     id: 'registration-3',
     eventId: 'event-kabbalat-shabbat',
     userId: 'user-daniel',
+    partySize: 1,
     registeredAt: '2026-08-05T12:25:00+02:00',
   },
 ]

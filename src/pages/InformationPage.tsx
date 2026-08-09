@@ -2,15 +2,24 @@ import {
   Bell,
   CalendarDays,
   ChevronRight,
-  LockKeyhole,
+  ChevronUp,
   Newspaper,
   Pin,
 } from 'lucide-react'
-import { informationPosts } from '../data/events'
-import type {
-  AppUser,
-  InformationPost,
-} from '../types'
+import {
+  useEffect,
+  useState,
+} from 'react'
+import type { AppUser } from '../types'
+import { useAuth } from '../hooks/useAuth'
+import {
+  subscribeToPublishedNews,
+  type NewsPost,
+} from '../services/newsService'
+import {
+  markNewsAsRead,
+  subscribeToUserNewsReads,
+} from '../services/newsReadsService'
 
 type InformationPageProps = {
   user: AppUser
@@ -19,34 +28,85 @@ type InformationPageProps = {
 function InformationPage({
   user,
 }: InformationPageProps) {
-  const visiblePosts = informationPosts
-    .filter((post) => post.status === 'published')
-    .filter((post) => {
-      if (post.visibility === 'allRegistered') {
-        return true
-      }
+  const { firebaseUser } =
+    useAuth()
 
-      if (post.visibility === 'adminsOnly') {
-        return user.role !== 'user'
-      }
+  const [posts, setPosts] =
+    useState<NewsPost[]>([])
 
-      return user.permissions.viewMemberInformation
-    })
-    .sort((a, b) => {
-      if (a.pinned !== b.pinned) {
-        return a.pinned ? -1 : 1
-      }
+  const [readNewsIds, setReadNewsIds] =
+    useState<Set<string>>(
+      () => new Set(),
+    )
 
-      const aDate =
-        a.publishedAt ?? a.createdAt
-      const bDate =
-        b.publishedAt ?? b.createdAt
+  const [loading, setLoading] =
+    useState(true)
 
-      return (
-        new Date(bDate).getTime() -
-        new Date(aDate).getTime()
+  const [error, setError] =
+    useState('')
+
+  useEffect(() => {
+    /*
+     * App.tsx styr redan att bara medlemmar/admin
+     * kommer in på denna sida.
+     */
+    if (
+      !user.permissions.viewMemberInformation
+    ) {
+      setPosts([])
+      setLoading(false)
+      return
+    }
+
+    return subscribeToPublishedNews(
+      (nextPosts) => {
+        setPosts(nextPosts)
+        setLoading(false)
+      },
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa publicerade nyheter:',
+          caughtError,
+        )
+
+        setError(
+          'Nyheterna kunde inte hämtas.',
+        )
+        setLoading(false)
+      },
+    )
+  }, [
+    user.permissions.viewMemberInformation,
+  ])
+
+  useEffect(() => {
+    if (!firebaseUser) {
+      setReadNewsIds(
+        new Set(),
       )
-    })
+      return
+    }
+
+    return subscribeToUserNewsReads(
+      firebaseUser.uid,
+      (reads) => {
+        setReadNewsIds(
+          new Set(
+            reads.map(
+              (read) =>
+                read.newsId,
+            ),
+          ),
+        )
+      },
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa vilka nyheter som är lästa:',
+          caughtError,
+        )
+      },
+    )
+  }, [firebaseUser])
 
   return (
     <div className="space-y-5">
@@ -54,16 +114,15 @@ function InformationPage({
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-sky-700">
-              Senaste från församlingen
+              Senaste nytt från Adat Jisrael
             </p>
 
             <h1 className="mt-1 text-2xl font-bold text-[#183b70]">
-              Information
+              Nyheter
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Nyheter, viktiga meddelanden och information från
-              Adat Jisrael.
+              Här hittar du nyheter, viktiga meddelanden och uppdateringar från Adat Jisrael.
             </p>
           </div>
 
@@ -73,12 +132,83 @@ function InformationPage({
         </div>
       </section>
 
-      {visiblePosts.length > 0 ? (
+      {error && (
+        <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+          {error}
+        </p>
+      )}
+
+      {loading ? (
+        <section className="rounded-3xl bg-white p-7 text-center shadow-sm ring-1 ring-slate-200">
+          <p className="text-sm text-slate-500">
+            Hämtar nyheter…
+          </p>
+        </section>
+      ) : posts.length > 0 ? (
         <section className="space-y-3">
-          {visiblePosts.map((post) => (
-            <InformationCard
+          {posts.map((post) => (
+            <NewsCard
               key={post.id}
               post={post}
+              isRead={
+                readNewsIds.has(
+                  post.id,
+                )
+              }
+              onRead={() => {
+                if (!firebaseUser) {
+                  return
+                }
+
+                /*
+                 * Uppdatera UI direkt så att NY-badgen
+                 * försvinner utan att vänta på Firestore.
+                 */
+                setReadNewsIds(
+                  (current) => {
+                    const next =
+                      new Set(current)
+
+                    next.add(
+                      post.id,
+                    )
+
+                    return next
+                  },
+                )
+
+                void markNewsAsRead(
+                  post.id,
+                  firebaseUser.uid,
+                ).catch(
+                  (caughtError) => {
+                    console.error(
+                      'Kunde inte markera nyheten som läst:',
+                      caughtError,
+                    )
+
+                    /*
+                     * Om Firestore-sparningen misslyckas
+                     * återställ statusen så användaren
+                     * inte får falsk lässtatus.
+                     */
+                    setReadNewsIds(
+                      (current) => {
+                        const next =
+                          new Set(
+                            current,
+                          )
+
+                        next.delete(
+                          post.id,
+                        )
+
+                        return next
+                      },
+                    )
+                  },
+                )
+              }}
             />
           ))}
         </section>
@@ -89,12 +219,11 @@ function InformationPage({
           </div>
 
           <h2 className="mt-5 text-lg font-bold text-slate-800">
-            Ingen information ännu
+            Inga nyheter ännu
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Nya meddelanden från Adat Jisrael kommer att visas
-            här.
+            Nya meddelanden från Adat Jisrael kommer att visas här.
           </p>
         </section>
       )}
@@ -108,8 +237,7 @@ function InformationPage({
           </p>
 
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            I den färdiga appen kan viktiga meddelanden även
-            skickas som pushnotiser.
+            Viktiga meddelanden kommer även kunna skickas som pushnotiser.
           </p>
         </div>
       </section>
@@ -117,22 +245,28 @@ function InformationPage({
   )
 }
 
-type InformationCardProps = {
-  post: InformationPost
+type NewsCardProps = {
+  post: NewsPost
+  isRead: boolean
+  onRead: () => void
 }
 
-function InformationCard({
+function NewsCard({
   post,
-}: InformationCardProps) {
-  const publishedDate = formatPostDate(
-    post.publishedAt ?? post.createdAt,
-  )
+  isRead,
+  onRead,
+}: NewsCardProps) {
+  const [open, setOpen] =
+    useState(false)
+
+  const publishedDate =
+    formatPostDate(
+      post.publishedAt ??
+        post.createdAt,
+    )
 
   return (
-    <button
-      type="button"
-      className="w-full overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md"
-    >
+    <article className="w-full overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-slate-200">
       {post.imageUrl && (
         <img
           src={post.imageUrl}
@@ -143,17 +277,16 @@ function InformationCard({
 
       <div className="p-5">
         <div className="flex items-center gap-2">
-          {post.pinned && (
+          {post.isPinned && (
             <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
               <Pin className="h-3 w-3" />
               Viktigt
             </span>
           )}
 
-          {post.visibility === 'membersOnly' && (
-            <span className="flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#183b70]">
-              <LockKeyhole className="h-3 w-3" />
-              Medlemmar
+          {!isRead && (
+            <span className="rounded-full bg-rose-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              Ny
             </span>
           )}
         </div>
@@ -162,10 +295,16 @@ function InformationCard({
           {post.title}
         </h2>
 
-        {post.summary && (
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            {post.summary}
-          </p>
+        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-500">
+          {post.excerpt}
+        </p>
+
+        {open && (
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <p className="whitespace-pre-line text-sm leading-7 text-slate-700">
+              {post.content}
+            </p>
+          </div>
         )}
 
         <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
@@ -174,22 +313,86 @@ function InformationCard({
             {publishedDate}
           </p>
 
-          <span className="flex items-center gap-1 text-sm font-bold text-[#183b70]">
-            Läs mer
-            <ChevronRight className="h-4 w-4" />
-          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (!open && !isRead) {
+                onRead()
+              }
+
+              setOpen(
+                (current) =>
+                  !current,
+              )
+            }}
+            className="flex items-center gap-1 text-sm font-bold text-[#183b70]"
+          >
+            {open
+              ? 'Visa mindre'
+              : 'Läs mer'}
+
+            {open ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
         </div>
       </div>
-    </button>
+    </article>
   )
 }
 
-function formatPostDate(dateValue: string) {
-  return new Intl.DateTimeFormat('sv-SE', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(dateValue))
+function formatPostDate(
+  value: unknown,
+): string {
+  if (!value) {
+    return ''
+  }
+
+  let date: Date
+
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (
+      value as {
+        toDate?: unknown
+      }
+    ).toDate === 'function'
+  ) {
+    date = (
+      value as {
+        toDate: () => Date
+      }
+    ).toDate()
+  } else {
+    date =
+      new Date(
+        value as
+          | string
+          | number
+          | Date,
+      )
+  }
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return ''
+  }
+
+  return new Intl.DateTimeFormat(
+    'sv-SE',
+    {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    },
+  ).format(date)
 }
 
 export default InformationPage

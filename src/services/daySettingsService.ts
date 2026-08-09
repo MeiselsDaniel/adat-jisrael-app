@@ -24,12 +24,13 @@ export type DaySettings = {
   holidayName?: string
   sermon?: string
   comment?: string
-
+  moreInformation?: string
   customCandleLightingTime?: string
   customHavdalaTime?: string
 
   showCandleLighting?: boolean
   showHavdala?: boolean
+  showMincha?: boolean
 
   createdAt?: unknown
   updatedAt?: unknown
@@ -43,12 +44,14 @@ export type SaveDaySettingsInput = {
   holidayName?: string
   sermon?: string
   comment?: string
+  moreInformation?: string
 
   customCandleLightingTime?: string
   customHavdalaTime?: string
 
   showCandleLighting: boolean
   showHavdala: boolean
+  showMincha: boolean
 
   updatedBy: string
 }
@@ -67,10 +70,12 @@ export async function saveDaySettings({
   holidayName,
   sermon,
   comment,
+  moreInformation,
   customCandleLightingTime,
   customHavdalaTime,
   showCandleLighting,
   showHavdala,
+  showMincha,
   updatedBy,
 }: SaveDaySettingsInput): Promise<void> {
   const reference = doc(
@@ -95,6 +100,11 @@ export async function saveDaySettings({
       comment:
         normalizeOptionalText(comment),
 
+      moreInformation:
+        normalizeOptionalText(
+          moreInformation,
+        ),
+
       customCandleLightingTime:
         normalizeOptionalTime(
           customCandleLightingTime,
@@ -107,6 +117,7 @@ export async function saveDaySettings({
 
       showCandleLighting,
       showHavdala,
+      showMincha,
 
       updatedBy,
       updatedAt: serverTimestamp(),

@@ -4,6 +4,8 @@ export type Page =
   | 'information'
   | 'kiddush'
   | 'membership'
+  | 'boardContact'
+  | 'profile'
   | 'more'
 
 export type UserRole =
@@ -77,6 +79,17 @@ export type AppEvent = {
   title: string
   description?: string
 
+  imageUrl?: string
+
+  memberPrice?: number
+  nonMemberPrice?: number
+
+  swishNumber?: string
+  swishMessage?: string
+
+  registrationDeadline?: string
+  maxParticipants?: number
+
   startDate: string
   startTime: string
   endTime?: string
@@ -111,7 +124,16 @@ export type EventRegistration = {
   id: string
   eventId: string
   userId: string
+
+  userName?: string
+
+  partySize: number
+  memberCount?: number
+  nonMemberCount?: number
+  participantNames?: string[]
+
   registeredAt: string
+  updatedAt?: string
 }
 
 export type InformationStatus =

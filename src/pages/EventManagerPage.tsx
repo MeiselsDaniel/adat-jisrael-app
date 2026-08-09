@@ -534,7 +534,7 @@ function getEventTypeName(
     jahrzeit: 'Jahrzeit',
     kiddush: 'Kiddush',
     shiur: 'Shiur',
-    activity: 'Aktivitet',
+    activity: 'Fest',
     holiday: 'Högtid',
     meeting: 'Möte',
     other: 'Annat',

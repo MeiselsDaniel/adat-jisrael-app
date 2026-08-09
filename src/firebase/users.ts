@@ -26,13 +26,44 @@ export type FirebaseUserStatus =
   | 'approved'
   | 'blocked'
 
+
+export type NotificationPreferences = {
+  importantInformation: boolean
+  tfilot: boolean
+  shiurim: boolean
+  parties: boolean
+  jahrzeit: boolean
+  mazelTov: boolean
+}
+
+export const defaultNotificationPreferences:
+  NotificationPreferences = {
+    importantInformation: true,
+    tfilot: true,
+    shiurim: true,
+    parties: true,
+    jahrzeit: true,
+    mazelTov: true,
+  }
+
 export type FirebaseUserProfile = {
+  /*
+   * Sätts endast av admin.
+   * Avgör om användaren kan räknas och
+   * anmäla sig till minjan.
+   */
+  countsForMinyan?: boolean
+
   uid: string
   firstName: string
   lastName: string
   name: string
   email: string
   phone?: string
+
+  notificationPreferences?:
+    NotificationPreferences
+
   role: FirebaseUserRole
   status: FirebaseUserStatus
   createdAt?: unknown
@@ -52,8 +83,13 @@ export type UpdateUserProfileInput = {
   lastName?: string
   name?: string
   phone?: string
+
+  notificationPreferences?:
+    NotificationPreferences
+
   role?: FirebaseUserRole
   status?: FirebaseUserStatus
+  countsForMinyan?: boolean
 }
 
 export async function createUserProfile({
@@ -74,6 +110,9 @@ export async function createUserProfile({
     lastName: trimmedLastName,
     name: `${trimmedFirstName} ${trimmedLastName}`.trim(),
     email: trimmedEmail,
+    notificationPreferences: {
+      ...defaultNotificationPreferences,
+    },
     role: 'guest',
     status: 'pending',
     createdAt: serverTimestamp(),

@@ -11,15 +11,21 @@ import {
   type TefilaRecord,
 } from '../services/tefilaService'
 import type { Tefila } from '../types'
+import { sendMinyanNeedPush } from '../services/adminPushService'
 
 type LiveMinyanCardProps = {
   tefila: Tefila
   showAdminControls?: boolean
+  extraInfo?: {
+    label: string
+    value: string
+  }
 }
 
 function LiveMinyanCard({
   tefila,
   showAdminControls = false,
+  extraInfo,
 }: LiveMinyanCardProps) {
   const { firebaseUser, profile } = useAuth()
 
@@ -29,6 +35,16 @@ function LiveMinyanCard({
 
   const [record, setRecord] =
     useState<TefilaRecord | null>(null)
+
+  const [
+    sendingMinyanPush,
+    setSendingMinyanPush,
+  ] = useState(false)
+
+  const [
+    minyanPushMessage,
+    setMinyanPushMessage,
+  ] = useState('')
 
   useEffect(() => {
     const unsubscribe = subscribeToTefila(
@@ -70,6 +86,10 @@ function LiveMinyanCard({
   const canManage =
     showAdminControls &&
     profile?.role === 'admin'
+
+  const canRegisterForMinyan =
+    profile?.role === 'admin' ||
+    profile?.countsForMinyan === true
 
   async function ensureRecord() {
     await ensureTefilaExists({
@@ -118,8 +138,44 @@ function LiveMinyanCard({
     })
   }
 
+  async function sendMinyanPush() {
+    setSendingMinyanPush(true)
+    setMinyanPushMessage('')
+
+    try {
+      const result =
+        await sendMinyanNeedPush(
+          tefilaId,
+        )
+
+      setMinyanPushMessage(
+        result.successCount > 0
+          ? `Push skickad till ${result.successCount} enheter.`
+          : 'Ingen push kunde skickas.',
+      )
+    } catch (error) {
+      console.error(
+        'Kunde inte skicka minjanpush:',
+        error,
+      )
+
+      setMinyanPushMessage(
+        'Pushen kunde inte skickas.',
+      )
+    } finally {
+      setSendingMinyanPush(false)
+    }
+  }
+
+  const peopleNeeded =
+    Math.max(
+      0,
+      10 - attendance,
+    )
+
   return (
-    <MinyanCard
+    <>
+      <MinyanCard
       tefila={displayedTefila}
       registered={registered}
       attendance={attendance}
@@ -142,12 +198,42 @@ function LiveMinyanCard({
         record?.actualAttendance
       }
       canManage={canManage}
+      canRegister={canRegisterForMinyan}
+      extraInfo={extraInfo}
       onRegister={register}
       onUnregister={unregister}
       onCancel={cancelTefila}
       onReactivate={reactivateTefila}
       onConfirm={saveMinyanResult}
     />
+
+      {canManage &&
+        record?.status !== 'cancelled' &&
+        peopleNeeded > 0 && (
+          <div className="mt-2 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-100">
+            <button
+              type="button"
+              disabled={sendingMinyanPush}
+              onClick={() => {
+                void sendMinyanPush()
+              }}
+              className="w-full rounded-xl bg-amber-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+            >
+              {sendingMinyanPush
+                ? 'Skickar…'
+                : peopleNeeded === 1
+                  ? 'Skicka push – en till behövs'
+                  : `Skicka push – ${peopleNeeded} till behövs`}
+            </button>
+
+            {minyanPushMessage && (
+              <p className="mt-2 text-center text-xs font-semibold text-amber-900">
+                {minyanPushMessage}
+              </p>
+            )}
+          </div>
+        )}
+    </>
   )
 }
 

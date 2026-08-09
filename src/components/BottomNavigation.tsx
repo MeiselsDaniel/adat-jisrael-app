@@ -6,8 +6,22 @@ import {
   UserPlus,
   Wine,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import type { AppUser, Page } from '../types'
+import { useAuth } from '../hooks/useAuth'
+import {
+  subscribeToPublishedNews,
+  type NewsPost,
+} from '../services/newsService'
+import {
+  subscribeToUserNewsReads,
+  type NewsRead,
+} from '../services/newsReadsService'
 
 type BottomNavigationProps = {
   page: Page
@@ -20,9 +34,78 @@ function BottomNavigation({
   setPage,
   user,
 }: BottomNavigationProps) {
+  const { firebaseUser } =
+    useAuth()
+
+  const [publishedNews, setPublishedNews] =
+    useState<NewsPost[]>([])
+
+  const [newsReads, setNewsReads] =
+    useState<NewsRead[]>([])
+
   const isMember =
     user.permissions.viewMemberInformation &&
     user.permissions.bookKiddush
+
+  useEffect(() => {
+    if (!isMember) {
+      setPublishedNews([])
+      return
+    }
+
+    return subscribeToPublishedNews(
+      setPublishedNews,
+      (error) => {
+        console.error(
+          'Kunde inte läsa nyheter till menybadgen:',
+          error,
+        )
+      },
+    )
+  }, [isMember])
+
+  useEffect(() => {
+    if (
+      !isMember ||
+      !firebaseUser
+    ) {
+      setNewsReads([])
+      return
+    }
+
+    return subscribeToUserNewsReads(
+      firebaseUser.uid,
+      setNewsReads,
+      (error) => {
+        console.error(
+          'Kunde inte läsa nyhetsstatus till menybadgen:',
+          error,
+        )
+      },
+    )
+  }, [
+    firebaseUser,
+    isMember,
+  ])
+
+  const unreadNewsCount =
+    useMemo(() => {
+      const readIds =
+        new Set(
+          newsReads.map(
+            (read) =>
+              read.newsId,
+          ),
+        )
+
+      return publishedNews.filter(
+        (post) =>
+          !readIds.has(post.id),
+      ).length
+    }, [
+      newsReads,
+      publishedNews,
+    ])
 
   if (!isMember) {
     return (
@@ -76,8 +159,13 @@ function BottomNavigation({
 
       <NavButton
         active={page === 'information'}
-        label="Information"
+        label="Nyheter"
         icon={<Newspaper className="h-5 w-5" />}
+        badge={
+          unreadNewsCount > 0
+            ? unreadNewsCount
+            : undefined
+        }
         onClick={() => setPage('information')}
       />
 
@@ -102,6 +190,7 @@ type NavButtonProps = {
   active: boolean
   label: string
   icon: ReactNode
+  badge?: number
   onClick: () => void
 }
 
@@ -109,6 +198,7 @@ function NavButton({
   active,
   label,
   icon,
+  badge,
   onClick,
 }: NavButtonProps) {
   return (
@@ -121,7 +211,18 @@ function NavButton({
           : 'text-slate-400 hover:text-slate-700'
       }`}
     >
-      {icon}
+      <span className="relative">
+        {icon}
+
+        {badge !== undefined &&
+          badge > 0 && (
+            <span className="absolute -right-3 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-white">
+              {badge > 99
+                ? '99+'
+                : badge}
+            </span>
+          )}
+      </span>
 
       <span className="max-w-full truncate">
         {label}

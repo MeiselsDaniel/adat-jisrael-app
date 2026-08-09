@@ -9,7 +9,9 @@ import {
 } from 'lucide-react'
 import DaySettingsEditor from '../components/DaySettingsEditor'
 import LiveMinyanCard from '../components/LiveMinyanCard'
+import TefilaInvitePanel from '../components/TefilaInvitePanel'
 import { synagogueSettings } from '../data/settings'
+import { getHebcalDayInfo } from '../services/hebcalService'
 import {
   saveTefila,
   type TefilaRecord,
@@ -28,8 +30,12 @@ type TefilaDayGroup = {
   tfilot: Tefila[]
 }
 
+type TefilaManagerTab =
+  | 'shabbat'
+  | 'weekdays'
+
 const standardTfilot =
-  generateStandardTfilot()
+  generateStandardTfilot(new Date(), 90)
 
 const upcomingTfilot =
   addKabbalatShabbat(standardTfilot)
@@ -37,7 +43,18 @@ const upcomingTfilot =
 const groupedTfilot =
   addShabbatGroups(
     groupTfilotByDate(upcomingTfilot),
-  )
+  ).filter((group) => {
+    const today = new Date()
+
+    const todayValue =
+      `${today.getFullYear()}-${String(
+        today.getMonth() + 1,
+      ).padStart(2, '0')}-${String(
+        today.getDate(),
+      ).padStart(2, '0')}`
+
+    return group.dateValue >= todayValue
+  })
 
 function TefilaManagerPage({
   onBack,
@@ -53,6 +70,126 @@ function TefilaManagerPage({
 
   const [error, setError] =
     useState('')
+
+  const [tab, setTab] =
+    useState<TefilaManagerTab>('shabbat')
+
+  const shabbatGroups =
+    groupedTfilot
+      .map((group) => {
+        const date =
+          new Date(
+            `${group.dateValue}T12:00:00`,
+          )
+
+        const weekday =
+          date.getDay()
+
+        const hebcal =
+          getHebcalDayInfo(
+            group.dateValue,
+          )
+
+        // Lördag: hela gruppen
+        if (weekday === 6) {
+          return group
+        }
+
+        // Fredag: bara Kabbalat Shabbat
+        if (weekday === 5) {
+          const kabbalat =
+            group.tfilot.filter(
+              (tefila) =>
+                isKabbalatShabbat(
+                  tefila,
+                ),
+            )
+
+          return kabbalat.length > 0
+            ? {
+                ...group,
+                tfilot: kabbalat,
+              }
+            : null
+        }
+
+        // Övriga riktiga helgdagar
+        const isActualHoliday =
+          hebcal.holidayNames.length > 0 &&
+          !hebcal.isErevHoliday
+
+        return isActualHoliday
+          ? group
+          : null
+      })
+      .filter(
+        (
+          group,
+        ): group is TefilaDayGroup =>
+          group !== null,
+      )
+
+  const weekdayGroups =
+    groupedTfilot
+      .map((group) => {
+        const date =
+          new Date(
+            `${group.dateValue}T12:00:00`,
+          )
+
+        const weekday =
+          date.getDay()
+
+        const hebcal =
+          getHebcalDayInfo(
+            group.dateValue,
+          )
+
+        // Lördag ska aldrig ligga här
+        if (weekday === 6) {
+          return null
+        }
+
+        // Fredag: allt utom Kabbalat Shabbat
+        if (weekday === 5) {
+          const weekdayTfilot =
+            group.tfilot.filter(
+              (tefila) =>
+                !isKabbalatShabbat(
+                  tefila,
+                ),
+            )
+
+          return weekdayTfilot.length > 0
+            ? {
+                ...group,
+                tfilot: weekdayTfilot,
+              }
+            : null
+        }
+
+        // Övriga riktiga helgdagar
+        const isActualHoliday =
+          hebcal.holidayNames.length > 0 &&
+          !hebcal.isErevHoliday
+
+        if (isActualHoliday) {
+          return null
+        }
+
+        return group
+      })
+      .filter(
+        (
+          group,
+        ): group is TefilaDayGroup =>
+          group !== null,
+      )
+
+  const visibleGroups =
+    tab === 'shabbat'
+      ? shabbatGroups
+      : weekdayGroups
 
   function startEditing(
     tefila: Tefila,
@@ -158,7 +295,7 @@ function TefilaManagerPage({
 
           <div>
             <p className="font-bold text-[#183b70]">
-              Kommande två veckor
+              Kommande tre månader
             </p>
 
             <p className="mt-1 text-sm leading-6 text-slate-600">
@@ -175,8 +312,38 @@ function TefilaManagerPage({
         </p>
       )}
 
+      <div className="grid grid-cols-2 rounded-2xl bg-slate-200/70 p-1">
+        <button
+          type="button"
+          onClick={() =>
+            setTab('shabbat')
+          }
+          className={`rounded-xl px-3 py-3 text-sm font-bold ${
+            tab === 'shabbat'
+              ? 'bg-white text-[#183b70] shadow-sm'
+              : 'text-slate-500'
+          }`}
+        >
+          Shabbat & helger
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            setTab('weekdays')
+          }
+          className={`rounded-xl px-3 py-3 text-sm font-bold ${
+            tab === 'weekdays'
+              ? 'bg-white text-[#183b70] shadow-sm'
+              : 'text-slate-500'
+          }`}
+        >
+          Vardagar
+        </button>
+      </div>
+
       <section className="space-y-7">
-        {groupedTfilot.map((group) => (
+        {visibleGroups.map((group) => (
           <div
             key={group.dateValue}
             className="space-y-3"
@@ -299,18 +466,24 @@ function TefilaManagerPage({
                         </div>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          startEditing(
-                            tefila,
-                          )
-                        }
+                      <>
+                        <TefilaInvitePanel
+                          tefila={tefila}
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            startEditing(
+                              tefila,
+                            )
+                          }
                         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[#183b70] shadow-sm ring-1 ring-slate-200"
                       >
                         <Pencil className="h-4 w-4" />
                         Ändra tid för denna tfilah
                       </button>
+                      </>
                     )}
                   </div>
                 )
@@ -434,6 +607,27 @@ function formatDateValue(
   ).padStart(2, '0')
 
   return `${year}-${month}-${day}`
+}
+
+function isKabbalatShabbat(
+  tefila: Tefila,
+): boolean {
+  const id =
+    String(
+      tefila.firestoreId ??
+        tefila.id,
+    ).toLowerCase()
+
+  return (
+    tefila.title
+      .toLowerCase()
+      .includes(
+        'kabbalat shabbat',
+      ) ||
+    id.includes(
+      'kabbalat-shabbat',
+    )
+  )
 }
 
 function getTefilaId(
