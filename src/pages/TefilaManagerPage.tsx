@@ -1,4 +1,8 @@
-import { useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import {
   ArrowLeft,
   CalendarDays,
@@ -14,6 +18,7 @@ import { synagogueSettings } from '../data/settings'
 import { getHebcalDayInfo } from '../services/hebcalService'
 import {
   saveTefila,
+  subscribeToTfilotBetween,
   type TefilaRecord,
 } from '../services/tefilaService'
 import type { Tefila } from '../types'
@@ -40,25 +45,187 @@ const standardTfilot =
 const upcomingTfilot =
   addKabbalatShabbat(standardTfilot)
 
-const groupedTfilot =
-  addShabbatGroups(
-    groupTfilotByDate(upcomingTfilot),
-  ).filter((group) => {
-    const today = new Date()
-
-    const todayValue =
-      `${today.getFullYear()}-${String(
-        today.getMonth() + 1,
-      ).padStart(2, '0')}-${String(
-        today.getDate(),
-      ).padStart(2, '0')}`
-
-    return group.dateValue >= todayValue
-  })
-
 function TefilaManagerPage({
   onBack,
 }: TefilaManagerPageProps) {
+  const [
+    firebaseTfilot,
+    setFirebaseTfilot,
+  ] = useState<TefilaRecord[]>([])
+
+  useEffect(() => {
+    const today = new Date()
+
+    const endDate =
+      new Date(today)
+
+    endDate.setDate(
+      endDate.getDate() + 90,
+    )
+
+    return subscribeToTfilotBetween(
+      formatDateValue(today),
+      formatDateValue(endDate),
+      setFirebaseTfilot,
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa tfilot till admin:',
+          caughtError,
+        )
+      },
+    )
+  }, [])
+
+  const mergedAdminTfilot =
+    useMemo(() => {
+      const firebaseById =
+        new Map(
+          firebaseTfilot.map(
+            (record) => [
+              record.id,
+              record,
+            ],
+          ),
+        )
+
+      const standardIds =
+        new Set<string>()
+
+      const mergedStandard =
+        upcomingTfilot.map(
+          (tefila): Tefila => {
+            const tefilaId =
+              getTefilaId(tefila)
+
+            standardIds.add(
+              tefilaId,
+            )
+
+            const record =
+              firebaseById.get(
+                tefilaId,
+              )
+
+            if (!record) {
+              return tefila
+            }
+
+            const date =
+              new Date(
+                `${record.date}T12:00:00`,
+              )
+
+            return {
+              ...tefila,
+              id: tefilaId,
+              firestoreId:
+                record.id,
+              title:
+                record.title,
+              time:
+                record.time,
+              dateValue:
+                record.date,
+              day:
+                formatSwedishWeekday(
+                  date,
+                ),
+              date:
+                formatSwedishDate(
+                  date,
+                ),
+            }
+          },
+        )
+
+      const customTfilot =
+        firebaseTfilot
+          .filter(
+            (record) =>
+              !standardIds.has(
+                record.id,
+              ),
+          )
+          .map(
+            (record): Tefila => {
+              const date =
+                new Date(
+                  `${record.date}T12:00:00`,
+                )
+
+              return {
+                id: record.id,
+                firestoreId:
+                  record.id,
+                dateValue:
+                  record.date,
+                day:
+                  formatSwedishWeekday(
+                    date,
+                  ),
+                date:
+                  formatSwedishDate(
+                    date,
+                  ),
+                title:
+                  record.title,
+                time:
+                  record.time,
+                attending: 0,
+              }
+            },
+          )
+
+      return [
+        ...mergedStandard,
+        ...customTfilot,
+      ].sort(
+        (first, second) => {
+          const dateCompare =
+            (
+              first.dateValue ?? ''
+            ).localeCompare(
+              second.dateValue ?? '',
+            )
+
+          if (dateCompare !== 0) {
+            return dateCompare
+          }
+
+          return normalizeTime(
+            first.time,
+          ).localeCompare(
+            normalizeTime(
+              second.time,
+            ),
+          )
+        },
+      )
+    }, [firebaseTfilot])
+
+  const groupedTfilot =
+    useMemo(
+      () =>
+        addShabbatGroups(
+          groupTfilotByDate(
+            mergedAdminTfilot,
+          ),
+        ).filter(
+          (group) => {
+            const today =
+              formatDateValue(
+                new Date(),
+              )
+
+            return (
+              group.dateValue >=
+              today
+            )
+          },
+        ),
+      [mergedAdminTfilot],
+    )
+
   const [editingId, setEditingId] =
     useState<string | null>(null)
 
@@ -590,6 +757,23 @@ function addShabbatGroups(
       first.dateValue.localeCompare(
         second.dateValue,
       ),
+  )
+}
+
+function formatSwedishWeekday(
+  date: Date,
+): string {
+  const weekday =
+    new Intl.DateTimeFormat(
+      'sv-SE',
+      {
+        weekday: 'long',
+      },
+    ).format(date)
+
+  return (
+    weekday.charAt(0).toUpperCase() +
+    weekday.slice(1)
   )
 }
 

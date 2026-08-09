@@ -1,4 +1,8 @@
-import { useMemo, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import BottomNavigation from './components/BottomNavigation'
 import Header from './components/Header'
 import { getDefaultPermissions } from './data/users'
@@ -30,6 +34,9 @@ import type {
   FirebaseUserProfile,
   FirebaseUserRole,
 } from './firebase/users'
+import {
+  listenForForegroundPush,
+} from './services/pushNotificationService'
 
 type AdminView =
   | 'dashboard'
@@ -60,6 +67,14 @@ function App() {
   const [editingEvent, setEditingEvent] =
     useState<StoredAppEvent | null>(null)
 
+  const [
+    foregroundPush,
+    setForegroundPush,
+  ] = useState<{
+    title: string
+    body: string
+  } | null>(null)
+
   const currentUser = useMemo(
     () =>
       profile
@@ -67,6 +82,43 @@ function App() {
         : null,
     [profile],
   )
+
+  useEffect(() => {
+    if (!firebaseUser) {
+      return
+    }
+
+    const unsubscribe =
+      listenForForegroundPush(
+        (payload) => {
+          const message =
+            payload as {
+              notification?: {
+                title?: string
+                body?: string
+              }
+            }
+
+          setForegroundPush({
+            title:
+              message.notification?.title ??
+              'Ny notis',
+            body:
+              message.notification?.body ??
+              '',
+          })
+
+          window.setTimeout(
+            () => {
+              setForegroundPush(null)
+            },
+            8000,
+          )
+        },
+      )
+
+    return unsubscribe
+  }, [firebaseUser])
 
   async function handleLogout() {
     await logout()
@@ -126,9 +178,25 @@ function App() {
     )
   }
 
+  const pushBanner =
+    foregroundPush ? (
+      <div className="fixed left-1/2 top-4 z-[100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl bg-[#183b70] px-4 py-3 text-white shadow-xl">
+        <p className="font-bold">
+          {foregroundPush.title}
+        </p>
+
+        {foregroundPush.body && (
+          <p className="mt-1 text-sm text-blue-100">
+            {foregroundPush.body}
+          </p>
+        )}
+      </div>
+    ) : null
+
   if (adminOpen) {
     return (
       <div className="min-h-screen bg-slate-100 text-slate-900">
+        {pushBanner}
         <div className="mx-auto min-h-screen w-full max-w-md bg-[#f8fafc] px-4 pb-28 pt-5 shadow-xl">
           {adminView === 'dashboard' && (
             <AdminPage

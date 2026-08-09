@@ -9,6 +9,7 @@ import {
   Flame,
 } from 'lucide-react'
 import {
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -22,6 +23,7 @@ import {
 import {
   enablePushNotifications,
   getNotificationPermission,
+  hasPushRegistration,
 } from '../services/pushNotificationService'
 
 type ProfilePageProps = {
@@ -80,6 +82,87 @@ function ProfilePage({
     setPushMessage,
   ] = useState('')
 
+  const [
+    pushRegistered,
+    setPushRegistered,
+  ] = useState(false)
+
+  const [
+    checkingPush,
+    setCheckingPush,
+  ] = useState(true)
+
+  useEffect(() => {
+    if (!firebaseUser) {
+      return
+    }
+
+    let active = true
+
+    async function checkPushRegistration() {
+      try {
+        const registered =
+          await hasPushRegistration(
+            firebaseUser!.uid,
+          )
+
+        if (!active) {
+          return
+        }
+
+        if (registered) {
+          setPushRegistered(true)
+          setCheckingPush(false)
+          return
+        }
+
+        /*
+         * Webbläsaren har redan fått lov att
+         * visa notiser men Firestore saknar FID.
+         *
+         * Kör register() igen. Firebase triggar
+         * då onRegistered() med aktuell FID och
+         * vår service laddar upp den på nytt.
+         */
+        if (
+          getNotificationPermission() ===
+          'granted'
+        ) {
+          await enablePushNotifications(
+            firebaseUser!.uid,
+          )
+
+          if (!active) {
+            return
+          }
+
+          setPushRegistered(true)
+        } else {
+          setPushRegistered(false)
+        }
+      } catch (caughtError) {
+        console.error(
+          'Kunde inte synka pushregistrering:',
+          caughtError,
+        )
+
+        if (active) {
+          setPushRegistered(false)
+        }
+      } finally {
+        if (active) {
+          setCheckingPush(false)
+        }
+      }
+    }
+
+    void checkPushRegistration()
+
+    return () => {
+      active = false
+    }
+  }, [firebaseUser])
+
   async function activatePush() {
     if (!firebaseUser) {
       return
@@ -97,6 +180,8 @@ function ProfilePage({
       setPushPermission(
         getNotificationPermission(),
       )
+
+      setPushRegistered(true)
 
       setPushMessage(
         'Pushnotiser är aktiverade på den här enheten.',
@@ -354,9 +439,14 @@ function ProfilePage({
               Notiser på den här enheten
             </p>
 
-            {pushPermission === 'granted' ? (
+            {checkingPush ? (
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                Kontrollerar pushnotiser…
+              </p>
+            ) : pushPermission === 'granted' &&
+              pushRegistered ? (
               <p className="mt-1 text-sm leading-6 text-emerald-700">
-                Pushnotiser är aktiverade.
+                Pushnotiser är aktiverade på den här enheten.
               </p>
             ) : pushPermission === 'denied' ? (
               <p className="mt-1 text-sm leading-6 text-rose-700">

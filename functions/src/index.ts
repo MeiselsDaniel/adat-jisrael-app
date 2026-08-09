@@ -568,12 +568,16 @@ async function sendPushToRecipients(
         const code =
           item.error?.code || "";
 
-        logger.warn(
+        logger.error(
           "FCM-utskick misslyckades",
           {
             code,
+            message:
+              item.error?.message ?? "",
             fid:
               batch[index]?.fid,
+            error:
+              item.error,
           },
         );
 

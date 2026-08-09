@@ -1,11 +1,16 @@
 import {
+  collection,
   deleteDoc,
   doc,
+  getDocs,
+  query,
   serverTimestamp,
   setDoc,
+  where,
 } from 'firebase/firestore'
 import {
   isSupported,
+  onMessage,
   onRegistered,
   register,
 } from 'firebase/messaging'
@@ -171,6 +176,32 @@ export async function savePushRegistration(
   )
 }
 
+export async function hasPushRegistration(
+  userId: string,
+): Promise<boolean> {
+  const snapshot =
+    await getDocs(
+      query(
+        collection(
+          db,
+          'pushRegistrations',
+        ),
+        where(
+          'userId',
+          '==',
+          userId,
+        ),
+        where(
+          'enabled',
+          '==',
+          true,
+        ),
+      ),
+    )
+
+  return !snapshot.empty
+}
+
 export async function removePushRegistration(
   userId: string,
   installationId: string,
@@ -191,4 +222,23 @@ export function getNotificationPermission():
   }
 
   return Notification.permission
+}
+
+
+export function listenForForegroundPush(
+  callback: (
+    payload: unknown,
+  ) => void,
+): () => void {
+  return onMessage(
+    messaging,
+    (payload) => {
+      console.log(
+        'Push mottagen i förgrunden:',
+        payload,
+      )
+
+      callback(payload)
+    },
+  )
 }

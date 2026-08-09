@@ -159,8 +159,25 @@ function LiveMinyanCard({
         error,
       )
 
+      const firebaseError =
+        error as {
+          code?: string
+          message?: string
+          details?: unknown
+        }
+
+      console.error(
+        'Minjanpush error details:',
+        {
+          code: firebaseError.code,
+          message: firebaseError.message,
+          details: firebaseError.details,
+        },
+      )
+
       setMinyanPushMessage(
-        'Pushen kunde inte skickas.',
+        firebaseError.message ||
+          'Pushen kunde inte skickas.',
       )
     } finally {
       setSendingMinyanPush(false)
