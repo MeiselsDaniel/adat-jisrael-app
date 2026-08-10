@@ -50,7 +50,10 @@ import {
   subscribeToAllJahrzeits,
   type JahrzeitRecord,
 } from '../services/jahrzeitService'
-
+import {
+  subscribeToPinnedMessage,
+  type PinnedMessage,
+} from '../services/pinnedMessageService'
 type HomePageProps = Record<string, never>
 
 const upcomingTfilot = generateStandardTfilot()
@@ -115,7 +118,22 @@ function HomePage(
   const [now, setNow] =
     useState(() => new Date())
 
-  useEffect(() => {
+const [pinnedMessage, setPinnedMessage] =
+  useState<PinnedMessage | null>(null)
+
+useEffect(() => {
+  return subscribeToPinnedMessage(
+    setPinnedMessage,
+    (error) => {
+      console.error(
+        'Kunde inte läsa fäst meddelande:',
+        error,
+      )
+    },
+  )
+}, [])
+
+useEffect(() => {
     const intervalId = window.setInterval(
       () => {
         setNow(new Date())
@@ -412,6 +430,35 @@ function HomePage(
 
   return (
     <div className="space-y-7">
+      {pinnedMessage &&
+        pinnedMessage.active &&
+        formatDateValue(now) >= pinnedMessage.startDate &&
+        formatDateValue(now) <= pinnedMessage.endDate && (
+          <section className="rounded-3xl bg-amber-50 p-5 shadow-sm ring-1 ring-amber-200">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-700 shadow-sm">
+                <Star className="h-6 w-6" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+                  {pinnedMessage.type === 'mazelTov'
+                    ? 'Mazel tov!'
+                    : pinnedMessage.type === 'important'
+                      ? 'Viktig information'
+                      : pinnedMessage.type === 'fundraiser'
+                        ? 'Insamling'
+                        : 'Meddelande'}
+                </p>
+
+                <p className="mt-2 whitespace-pre-line text-base font-semibold leading-7 text-slate-800">
+                  {pinnedMessage.text}
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
       <section>
         <h1 className="text-2xl font-bold text-[#183b70]">
           På gång

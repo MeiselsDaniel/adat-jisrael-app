@@ -125,7 +125,7 @@ function LoginPage() {
 
           <p className="mt-3 leading-6 text-blue-100">
             Logga in eller skapa ett konto för att
-            ta del av Adat Jisrels app.
+            ta del av Adat Jisraels app.
           </p>
         </div>
 

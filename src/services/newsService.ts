@@ -16,6 +16,10 @@ export type NewsStatus =
   | 'draft'
   | 'published'
 
+export type NewsCategory =
+  | 'news'
+  | 'fundraiser'
+
 export type NewsPost = {
   id: string
   title: string
@@ -24,6 +28,7 @@ export type NewsPost = {
   imageUrl?: string | null
   isPinned: boolean
   status: NewsStatus
+category?: NewsCategory
   authorId: string
   authorName?: string | null
   publishedAt?: unknown
@@ -38,6 +43,7 @@ export type CreateNewsPostInput = {
   imageUrl?: string
   isPinned?: boolean
   status: NewsStatus
+category?: NewsCategory
   authorId: string
   authorName?: string
 }
@@ -49,6 +55,7 @@ export type UpdateNewsPostInput = {
   imageUrl?: string | null
   isPinned?: boolean
   status?: NewsStatus
+category?: NewsCategory
 }
 
 export async function createNewsPost(
@@ -67,6 +74,7 @@ export async function createNewsPost(
         isPinned:
           input.isPinned ?? false,
         status: input.status,
+category: input.category ?? 'news',
         authorId: input.authorId,
         authorName:
           input.authorName?.trim() ||
@@ -99,7 +107,12 @@ export async function updateNewsPost(
     updatedAt: serverTimestamp(),
   }
 
-  if (input.title !== undefined) {
+  if (input.category !== undefined) {
+updateData.category =
+input.category
+}
+
+if (input.title !== undefined) {
     updateData.title =
       input.title.trim()
   }

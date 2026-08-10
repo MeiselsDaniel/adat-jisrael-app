@@ -1,5 +1,4 @@
 import type {
-  AppUser,
   Permissions,
   UserCategory,
 } from '../types'
@@ -22,35 +21,6 @@ const nonMemberPermissions: Permissions = {
   viewMemberInformation: false,
 }
 
-export const demoUsers: AppUser[] = [
-  {
-    id: 'user-daniel',
-    name: 'Daniel Meisels',
-    email: 'daniel@adatjisrael.se',
-    role: 'admin',
-    category: 'board',
-    status: 'approved',
-    permissions: memberPermissions,
-  },
-  {
-    id: 'user-member',
-    name: 'Testmedlem',
-    email: 'medlem@adatjisrael.se',
-    role: 'user',
-    category: 'member',
-    status: 'approved',
-    permissions: memberPermissions,
-  },
-  {
-    id: 'user-guest',
-    name: 'Testbesökare',
-    email: 'gast@adatjisrael.se',
-    role: 'user',
-    category: 'nonMember',
-    status: 'approved',
-    permissions: nonMemberPermissions,
-  },
-]
 
 export function getDefaultPermissions(
   category: UserCategory,

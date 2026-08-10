@@ -7,6 +7,7 @@ import {
   ChevronUp,
   FileText,
   LoaderCircle,
+  Megaphone,
   Plus,
   RefreshCw,
   Settings,
@@ -32,6 +33,18 @@ import {
   type FirebaseUserProfile,
   type FirebaseUserRole,
 } from '../firebase/users'
+import {
+  disablePinnedMessage,
+  savePinnedMessage,
+  subscribeToPinnedMessage,
+  type PinnedMessageType,
+} from '../services/pinnedMessageService'
+import {
+  subscribeToMembershipApplications,
+  updateMembershipApplicationStatus,
+  type MembershipApplication,
+  type MembershipApplicationStatus,
+} from '../services/membershipApplicationService'
 
 type AdminPageProps = {
   onBack: () => void
@@ -74,6 +87,116 @@ function AdminPage({
 
   const [savingUserId, setSavingUserId] =
     useState<string | null>(null)
+
+  const [
+    pinnedMessageOpen,
+    setPinnedMessageOpen,
+  ] = useState(false)
+
+  const [
+    pinnedMessageType,
+    setPinnedMessageType,
+  ] = useState<PinnedMessageType>(
+    'mazelTov',
+  )
+
+  const [
+    pinnedMessageText,
+    setPinnedMessageText,
+  ] = useState('')
+
+  const [
+    pinnedMessageStartDate,
+    setPinnedMessageStartDate,
+  ] = useState(
+    new Date()
+      .toISOString()
+      .slice(0, 10),
+  )
+
+  const [
+    pinnedMessageEndDate,
+    setPinnedMessageEndDate,
+  ] = useState(
+    new Date()
+      .toISOString()
+      .slice(0, 10),
+  )
+
+  const [
+    pinnedMessageActive,
+    setPinnedMessageActive,
+  ] = useState(false)
+
+  const [
+    savingPinnedMessage,
+    setSavingPinnedMessage,
+  ] = useState(false)
+
+  const [
+    pinnedMessageFeedback,
+    setPinnedMessageFeedback,
+  ] = useState('')
+
+  const [
+    membershipApplications,
+    setMembershipApplications,
+  ] = useState<MembershipApplication[]>([])
+
+  const [
+    membershipApplicationsOpen,
+    setMembershipApplicationsOpen,
+  ] = useState(false)
+
+  const [
+    savingMembershipApplicationId,
+    setSavingMembershipApplicationId,
+  ] = useState<string | null>(null)
+
+
+
+  useEffect(() => {
+    return subscribeToMembershipApplications(
+      setMembershipApplications,
+      (error) => {
+        console.error(
+          'Kunde inte läsa medlemsansökningar:',
+          error,
+        )
+      },
+    )
+  }, [])
+useEffect(() => {
+    return subscribeToPinnedMessage(
+      (message) => {
+        if (!message) {
+          return
+        }
+
+        setPinnedMessageType(
+          message.type,
+        )
+        setPinnedMessageText(
+          message.text,
+        )
+        setPinnedMessageStartDate(
+          message.startDate,
+        )
+        setPinnedMessageEndDate(
+          message.endDate,
+        )
+        setPinnedMessageActive(
+          message.active,
+        )
+      },
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa fäst meddelande:',
+          caughtError,
+        )
+      },
+    )
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -138,6 +261,111 @@ function AdminPage({
     blockedUsers,
   ])
 
+  async function handleMembershipApplicationStatus(
+    applicationId: string,
+    status: MembershipApplicationStatus,
+  ) {
+    setSavingMembershipApplicationId(
+      applicationId,
+    )
+
+    try {
+      await updateMembershipApplicationStatus(
+        applicationId,
+        status,
+      )
+    } catch (error) {
+      console.error(
+        'Kunde inte uppdatera medlemsansökan:',
+        error,
+      )
+    } finally {
+      setSavingMembershipApplicationId(
+        null,
+      )
+    }
+  }
+
+  async function handleSavePinnedMessage() {
+    const cleanText =
+      pinnedMessageText.trim()
+
+    if (!cleanText) {
+      setPinnedMessageFeedback(
+        'Skriv ett meddelande först.',
+      )
+      return
+    }
+
+    if (
+      pinnedMessageEndDate <
+      pinnedMessageStartDate
+    ) {
+      setPinnedMessageFeedback(
+        'Slutdatum kan inte vara före startdatum.',
+      )
+      return
+    }
+
+    setSavingPinnedMessage(true)
+    setPinnedMessageFeedback('')
+
+    try {
+      await savePinnedMessage({
+        type: pinnedMessageType,
+        text: cleanText,
+        startDate:
+          pinnedMessageStartDate,
+        endDate:
+          pinnedMessageEndDate,
+        active: true,
+      })
+
+      setPinnedMessageActive(true)
+
+      setPinnedMessageFeedback(
+        'Meddelandet är publicerat.',
+      )
+    } catch (caughtError) {
+      console.error(
+        'Kunde inte publicera fäst meddelande:',
+        caughtError,
+      )
+
+      setPinnedMessageFeedback(
+        'Meddelandet kunde inte publiceras.',
+      )
+    } finally {
+      setSavingPinnedMessage(false)
+    }
+  }
+
+  async function handleDisablePinnedMessage() {
+    setSavingPinnedMessage(true)
+    setPinnedMessageFeedback('')
+
+    try {
+      await disablePinnedMessage()
+
+      setPinnedMessageActive(false)
+
+      setPinnedMessageFeedback(
+        'Meddelandet är borttaget från startsidan.',
+      )
+    } catch (caughtError) {
+      console.error(
+        'Kunde inte ta bort fäst meddelande:',
+        caughtError,
+      )
+
+      setPinnedMessageFeedback(
+        'Meddelandet kunde inte tas bort.',
+      )
+    } finally {
+      setSavingPinnedMessage(false)
+    }
+  }
+
   async function runUserAction(
     uid: string,
     action: () => Promise<void>,
@@ -176,7 +404,7 @@ function AdminPage({
         await updateUserProfile(
           uid,
           {
-            countsForMinyan: false,
+            countsForMinyan: true,
           },
         )
       },
@@ -479,6 +707,285 @@ function AdminPage({
             description="Hantera bokningar och lediga datum"
             onClick={onOpenKiddush}
           />
+
+          <AdminMenuItem
+            icon={
+              <Megaphone className="h-6 w-6" />
+            }
+            title="Fäst meddelande"
+            description="Visa ett tillfälligt meddelande på startsidan"
+            onClick={() =>
+              setPinnedMessageOpen(
+                (current) => !current,
+              )
+            }
+          />
+
+          {pinnedMessageOpen && (
+            <div className="border-t border-slate-100 bg-slate-50 p-5">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-bold text-slate-700">
+                    Typ
+                  </label>
+
+                  <select
+                    value={pinnedMessageType}
+                    onChange={(event) =>
+                      setPinnedMessageType(
+                        event.target.value as
+                          PinnedMessageType,
+                      )
+                    }
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+                  >
+                    <option value="mazelTov">
+                      Mazel tov
+                    </option>
+
+                    <option value="important">
+                      Viktig information
+                    </option>
+
+                    <option value="fundraiser">
+                      Insamling
+                    </option>
+
+                    <option value="general">
+                      Meddelande
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-slate-700">
+                    Text
+                  </label>
+
+                  <textarea
+                    rows={3}
+                    value={pinnedMessageText}
+                    onChange={(event) =>
+                      setPinnedMessageText(
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Exempel: Mazel tov familjen ..."
+                    className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-bold text-slate-700">
+                      Från
+                    </label>
+
+                    <input
+                      type="date"
+                      value={
+                        pinnedMessageStartDate
+                      }
+                      onChange={(event) =>
+                        setPinnedMessageStartDate(
+                          event.target.value,
+                        )
+                      }
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-slate-700">
+                      Till
+                    </label>
+
+                    <input
+                      type="date"
+                      value={
+                        pinnedMessageEndDate
+                      }
+                      onChange={(event) =>
+                        setPinnedMessageEndDate(
+                          event.target.value,
+                        )
+                      }
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={
+                    savingPinnedMessage ||
+                    !pinnedMessageText.trim()
+                  }
+                  onClick={() => {
+                    void handleSavePinnedMessage()
+                  }}
+                  className="w-full rounded-2xl bg-[#183b70] px-4 py-3 font-bold text-white disabled:opacity-50"
+                >
+                  {savingPinnedMessage
+                    ? 'Sparar…'
+                    : pinnedMessageActive
+                      ? 'Uppdatera meddelande'
+                      : 'Publicera meddelande'}
+                </button>
+
+                {pinnedMessageActive && (
+                  <button
+                    type="button"
+                    disabled={
+                      savingPinnedMessage
+                    }
+                    onClick={() => {
+                      void handleDisablePinnedMessage()
+                    }}
+                    className="w-full rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800 ring-1 ring-rose-100 disabled:opacity-50"
+                  >
+                    Ta bort från startsidan
+                  </button>
+                )}
+
+                {pinnedMessageFeedback && (
+                  <p className="text-sm font-semibold text-slate-600">
+                    {pinnedMessageFeedback}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <AdminMenuItem
+            icon={
+              <Users className="h-6 w-6" />
+            }
+            title="Medlemsansökningar"
+            description="Se och hantera inkomna medlemsansökningar"
+            onClick={() =>
+              setMembershipApplicationsOpen(
+                (current) => !current,
+              )
+            }
+          />
+
+          {membershipApplicationsOpen && (
+            <div className="border-t border-slate-100 bg-slate-50 p-5">
+              <div className="space-y-4">
+                {membershipApplications.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    Inga medlemsansökningar ännu.
+                  </p>
+                ) : (
+                  membershipApplications.map(
+                    (application) => (
+                      <article
+                        key={application.id}
+                        className="rounded-2xl bg-white p-4 ring-1 ring-slate-200"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="font-bold text-slate-900">
+                              {application.name}
+                            </h3>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                              {application.email}
+                            </p>
+                          </div>
+
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                            {application.status === 'pending'
+                              ? 'Ny'
+                              : application.status === 'processing'
+                                ? 'Under behandling'
+                                : application.status === 'approved'
+                                  ? 'Godkänd'
+                                  : 'Avslagen'}
+                          </span>
+                        </div>
+
+                        {application.phone && (
+                          <p className="mt-3 text-sm text-slate-600">
+                            Telefon: {application.phone}
+                          </p>
+                        )}
+
+                        {application.address && (
+                          <p className="mt-1 text-sm text-slate-600">
+                            Adress: {application.address}
+                          </p>
+                        )}
+
+                        {application.message && (
+                          <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-600">
+                            {application.message}
+                          </div>
+                        )}
+
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={
+                              savingMembershipApplicationId === application.id
+                            }
+                            onClick={() => {
+                              void handleMembershipApplicationStatus(
+                                application.id,
+                                'processing',
+                              )
+                            }}
+                            className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-800 ring-1 ring-amber-200 disabled:opacity-50"
+                          >
+                            Under behandling
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              savingMembershipApplicationId === application.id
+                            }
+                            onClick={() => {
+                              void handleMembershipApplicationStatus(
+                                application.id,
+                                'approved',
+                              )
+                            }}
+                            className="rounded-xl bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 disabled:opacity-50"
+                          >
+                            Godkänd
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              savingMembershipApplicationId === application.id
+                            }
+                            onClick={() => {
+                              void handleMembershipApplicationStatus(
+                                application.id,
+                                'rejected',
+                              )
+                            }}
+                            className="col-span-2 rounded-xl bg-rose-50 px-3 py-2.5 text-xs font-bold text-rose-800 ring-1 ring-rose-200 disabled:opacity-50"
+                          >
+                            Avslagen
+                          </button>
+                        </div>
+
+                        {application.status === 'approved' && (
+                          <p className="mt-3 rounded-xl bg-sky-50 px-3 py-2 text-xs font-semibold leading-5 text-[#183b70]">
+                            Styrelsen har godkänt ansökan. Ändra användarens roll till Medlem separat när det är dags att ge medlemsbehörighet i appen.
+                          </p>
+                        )}
+                      </article>
+                    ),
+                  )
+                )}
+              </div>
+            </div>
+          )}
 
           <AdminMenuItem
             icon={

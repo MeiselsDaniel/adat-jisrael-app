@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   Bell,
+  CalendarDays,
   BookOpen,
   Megaphone,
   PartyPopper,
@@ -25,6 +26,7 @@ import {
   getNotificationPermission,
   hasPushRegistration,
 } from '../services/pushNotificationService'
+import { getHebrewDateFromIso } from '../utils/hebcal'
 
 type ProfilePageProps = {
   onBack: () => void
@@ -64,6 +66,19 @@ function ProfilePage({
 
   const [error, setError] =
     useState('')
+
+  const [birthDate, setBirthDate] =
+    useState(profile?.birthDate ?? '')
+
+  const [savingBirthDate, setSavingBirthDate] =
+    useState(false)
+
+  const [birthDateMessage, setBirthDateMessage] =
+    useState('')
+
+  useEffect(() => {
+    setBirthDate(profile?.birthDate ?? '')
+  }, [profile?.birthDate])
 
   const [
     pushPermission,
@@ -221,6 +236,40 @@ function ProfilePage({
     }
   }
 
+  async function saveBirthDate() {
+    if (!firebaseUser || !birthDate) {
+      return
+    }
+
+    setSavingBirthDate(true)
+    setError('')
+    setBirthDateMessage('')
+
+    try {
+      await updateUserProfile(
+        firebaseUser.uid,
+        {
+          birthDate,
+        },
+      )
+
+      setBirthDateMessage(
+        'Födelsedatumet är sparat.',
+      )
+    } catch (caughtError) {
+      console.error(
+        'Kunde inte spara födelsedatum:',
+        caughtError,
+      )
+
+      setError(
+        'Födelsedatumet kunde inte sparas.',
+      )
+    } finally {
+      setSavingBirthDate(false)
+    }
+  }
+
   async function togglePreference(
     key: keyof NotificationPreferences,
   ) {
@@ -297,6 +346,84 @@ function ProfilePage({
           </p>
         </section>
       )}
+
+      <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-[#183b70]">
+            <CalendarDays className="h-5 w-5" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold text-[#183b70]">
+              Födelsedag
+            </h2>
+
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Lägg till ditt födelsedatum. Det hebreiska datumet räknas ut automatiskt.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <label
+            htmlFor="birthDate"
+            className="text-sm font-bold text-slate-700"
+          >
+            Födelsedatum
+          </label>
+
+          <input
+            id="birthDate"
+            type="date"
+            value={birthDate}
+            onChange={(event) => {
+              setBirthDate(event.target.value)
+              setBirthDateMessage('')
+            }}
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+          />
+
+          {birthDate &&
+            getHebrewDateFromIso(birthDate) && (
+              <div className="mt-4 rounded-2xl bg-sky-50 px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-sky-700">
+                  Hebreiskt datum
+                </p>
+
+                <p className="mt-1 font-bold text-[#183b70]">
+                  {getHebrewDateFromIso(
+                    birthDate,
+                  )}
+                </p>
+              </div>
+            )}
+
+          <button
+            type="button"
+            disabled={
+              !birthDate ||
+              savingBirthDate ||
+              birthDate === profile?.birthDate
+            }
+            onClick={() => {
+              void saveBirthDate()
+            }}
+            className="mt-4 w-full rounded-2xl bg-[#183b70] px-4 py-3 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {savingBirthDate
+              ? 'Sparar…'
+              : birthDate === profile?.birthDate
+                ? 'Sparat'
+                : 'Spara födelsedatum'}
+          </button>
+
+          {birthDateMessage && (
+            <p className="mt-3 text-sm font-semibold text-emerald-700">
+              {birthDateMessage}
+            </p>
+          )}
+        </div>
+      </section>
 
       <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center gap-3 border-b border-slate-100 p-5">

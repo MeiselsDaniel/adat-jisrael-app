@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { saveEvent } from '../services/eventService'
 import {
+  createNewsPost,
+} from '../services/newsService'
+import {
   saveTefila,
   type TefilaRecord,
 } from '../services/tefilaService'
@@ -166,6 +169,9 @@ function NewEventPage({
   const [showAttendeeNames, setShowAttendeeNames] =
     useState(true)
   const [sendPushNotification, setSendPushNotification] =
+    useState(false)
+
+  const [publishAsNews, setPublishAsNews] =
     useState(false)
 
   const [recurrence, setRecurrence] =
@@ -432,6 +438,57 @@ function NewEventPage({
         await saveTefila(tefilaRecord)
       } else {
         await saveEvent(newEvent)
+
+        if (
+          eventType === 'activity' &&
+          publishAsNews &&
+          !initialEvent
+        ) {
+          const date = new Date(
+            `${newEvent.startDate}T12:00:00`,
+          )
+
+          const formattedDate =
+            new Intl.DateTimeFormat(
+              'sv-SE',
+              {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              },
+            ).format(date)
+
+          const timingParts = [
+            formattedDate,
+            newEvent.startTime
+              ? `kl. ${newEvent.startTime}`
+              : '',
+            newEvent.location ?? '',
+          ].filter(Boolean)
+
+          const timing =
+            timingParts.join(' • ')
+
+          const newsContent = [
+            timing,
+            newEvent.description ?? '',
+          ]
+            .filter(Boolean)
+            .join('\n\n')
+
+          await createNewsPost({
+            title: newEvent.title,
+            excerpt:
+              newEvent.description?.trim() ||
+              timing,
+            content: newsContent,
+            imageUrl:
+              newEvent.imageUrl || undefined,
+            isPinned: false,
+            status: 'published',
+            authorId: currentUserId,
+          })
+}
       }
 
       onSave(newEvent)
@@ -871,6 +928,16 @@ function NewEventPage({
               />
             </>
           )}
+
+          {eventType === 'activity' &&
+            !initialEvent && (
+              <Toggle
+                label="Publicera även som nyhet"
+                description="Skapar automatiskt en publicerad nyhet med aktivitetens titel, datum och information."
+                checked={publishAsNews}
+                onChange={setPublishAsNews}
+              />
+            )}
 
           <Toggle
             label="Skicka pushnotis"

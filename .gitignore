@@ -29,3 +29,5 @@ dist-ssr
 # Firebase Agent Skills – behövs inte för appen
 .agents/
 skills-lock.json
+.vercel
+.env*

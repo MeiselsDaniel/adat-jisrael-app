@@ -5,6 +5,7 @@ import {
 } from 'react'
 import {
   ArrowLeft,
+  Bell,
   Check,
   ChevronDown,
   ChevronUp,
@@ -20,11 +21,19 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import {
+  subscribeToFundraiser,
+  type Fundraiser,
+} from '../services/fundraiserService'
+import {
+  sendNewsPushNotification,
+} from '../services/pushService'
+import {
   createNewsPost,
   deleteNewsPost,
   subscribeToNews,
   updateNewsPost,
   type NewsPost,
+  type NewsCategory,
   type NewsStatus,
 } from '../services/newsService'
 
@@ -64,8 +73,27 @@ function NewsAdminPage({
   const [isPinned, setIsPinned] =
     useState(false)
 
-  const [status, setStatus] =
+  const [category, setCategory] =
+    useState<NewsCategory>('news')
+
+  const [fundraiserGoal, setFundraiserGoal] =
+    useState('30000')
+
+  const [fundraiserCurrent, setFundraiserCurrent] =
+    useState('0')
+
+  const [fundraiserActive, setFundraiserActive] =
+    useState(true)
+
+  
+
+  const [currentFundraiser, setCurrentFundraiser] =
+    useState<Fundraiser | null>(null)
+const [status, setStatus] =
     useState<NewsStatus>('published')
+
+  const [sendPushNotification, setSendPushNotification] =
+    useState(false)
 
   const [saving, setSaving] =
     useState(false)
@@ -78,6 +106,22 @@ function NewsAdminPage({
 
   const [saved, setSaved] =
     useState(false)
+
+  useEffect(() => {
+    return subscribeToFundraiser(
+      (nextFundraiser) => {
+        setCurrentFundraiser(
+          nextFundraiser,
+        )
+      },
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa aktuell insamling:',
+          caughtError,
+        )
+      },
+    )
+  }, [])
 
   useEffect(() => {
     return subscribeToNews(
@@ -106,7 +150,9 @@ function NewsAdminPage({
     setContent('')
     setImageUrl('')
     setIsPinned(false)
+    setCategory('news')
     setStatus('published')
+    setSendPushNotification(false)
     setError('')
     setSaved(false)
   }
@@ -129,7 +175,32 @@ function NewsAdminPage({
     setIsPinned(
       post.isPinned,
     )
+    setCategory(
+      post.category ?? 'news',
+    )
+
+    if (
+      post.category === 'fundraiser' &&
+      currentFundraiser
+    ) {
+      setFundraiserGoal(
+        String(
+          currentFundraiser.goalAmount,
+        ),
+      )
+
+      setFundraiserCurrent(
+        String(
+          currentFundraiser.currentAmount,
+        ),
+      )
+
+      setFundraiserActive(
+        currentFundraiser.active,
+      )
+    }
     setStatus(post.status)
+    setSendPushNotification(false)
     setError('')
     setSaved(false)
     setFormOpen(true)
@@ -174,6 +245,8 @@ function NewsAdminPage({
     setSaved(false)
     setError('')
 
+    let newsWasSaved = false
+
     try {
       if (editingPost) {
         await updateNewsPost(
@@ -186,6 +259,8 @@ function NewsAdminPage({
               imageUrl.trim() ||
               null,
             isPinned,
+
+            category,
             status,
           },
         )
@@ -198,6 +273,8 @@ function NewsAdminPage({
             imageUrl.trim() ||
             undefined,
           isPinned,
+
+          category,
           status,
           authorId:
             firebaseUser.uid,
@@ -207,24 +284,40 @@ function NewsAdminPage({
         })
       }
 
+      newsWasSaved = true
+
+      if (
+        status === 'published' &&
+        sendPushNotification
+      ) {
+        await sendNewsPushNotification({
+          title: title.trim(),
+          body: excerpt.trim(),
+        })
+      }
+
       setSaved(true)
 
       window.setTimeout(
         () => {
           closeForm()
         },
-        500,
+        700,
       )
     } catch (caughtError) {
       console.error(
-        'Kunde inte spara nyheten:',
+        newsWasSaved
+          ? 'Nyheten sparades men pushen misslyckades:'
+          : 'Kunde inte spara nyheten:',
         caughtError,
       )
 
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Nyheten kunde inte sparas.',
+        newsWasSaved
+          ? 'Nyheten är sparad, men pushnotisen kunde inte skickas.'
+          : caughtError instanceof Error
+            ? caughtError.message
+            : 'Nyheten kunde inte sparas.',
       )
     } finally {
       setSaving(false)
@@ -416,6 +509,120 @@ function NewsAdminPage({
             />
           </label>
 
+          <div>
+            <p className="text-sm font-bold text-slate-700">
+              Kategori
+            </p>
+
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setCategory('news')
+                }
+                className={`rounded-2xl px-4 py-3 text-sm font-bold ${
+                  category === 'news'
+                    ? 'bg-[#183b70] text-white'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                Nyhet
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCategory('fundraiser')
+                }
+                className={`rounded-2xl px-4 py-3 text-sm font-bold ${
+                  category === 'fundraiser'
+                    ? 'bg-[#68123f] text-white'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                Insamling
+              </button>
+            </div>
+          </div>
+
+          {category === 'fundraiser' && (
+            <section className="space-y-4 rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100">
+              <div>
+                <p className="font-bold text-[#68123f]">
+                  Insamlingsuppgifter
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Beloppen visas automatiskt i insamlingskortet under Nyheter.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-sm font-bold text-slate-700">
+                    Målbelopp
+                  </span>
+
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={fundraiserGoal}
+                    onChange={(event) =>
+                      setFundraiserGoal(
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-sky-600"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-bold text-slate-700">
+                    Insamlat
+                  </span>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={fundraiserCurrent}
+                    onChange={(event) =>
+                      setFundraiserCurrent(
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-sky-600"
+                  />
+                </label>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setFundraiserActive(
+                    (current) => !current,
+                  )
+                }
+                className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold ${
+                  fundraiserActive
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-white text-slate-600 ring-1 ring-slate-200'
+                }`}
+              >
+                <span>
+                  {fundraiserActive
+                    ? 'Insamlingen är aktiv'
+                    : 'Insamlingen är avslutad'}
+                </span>
+
+                {fundraiserActive && (
+                  <Check className="h-5 w-5" />
+                )}
+              </button>
+            </section>
+          )}
+
           <button
             type="button"
             onClick={() =>
@@ -455,9 +662,10 @@ function NewsAdminPage({
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
                   setStatus('draft')
-                }
+                  setSendPushNotification(false)
+                }}
                 className={`rounded-2xl px-4 py-3 text-sm font-bold ${
                   status === 'draft'
                     ? 'bg-slate-700 text-white'
@@ -485,6 +693,38 @@ function NewsAdminPage({
             </div>
           </div>
 
+          {status === 'published' && (
+            <button
+              type="button"
+              onClick={() =>
+                setSendPushNotification(
+                  (current) => !current,
+                )
+              }
+              className={`flex w-full items-center gap-3 rounded-2xl p-4 text-left ring-1 ${
+                sendPushNotification
+                  ? 'bg-sky-50 text-[#183b70] ring-sky-200'
+                  : 'bg-slate-50 text-slate-700 ring-slate-200'
+              }`}
+            >
+              <Bell className="h-5 w-5 shrink-0" />
+
+              <div className="flex-1">
+                <p className="text-sm font-bold">
+                  Skicka pushnotis
+                </p>
+
+                <p className="mt-0.5 text-xs opacity-70">
+                  Skicka rubriken och ingressen som en notis till medlemmarna.
+                </p>
+              </div>
+
+              {sendPushNotification && (
+                <Check className="h-5 w-5" />
+              )}
+            </button>
+          )}
+
           {error && (
             <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 ring-1 ring-rose-200">
               {error}
@@ -493,7 +733,9 @@ function NewsAdminPage({
 
           {saved && (
             <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-              Nyheten är sparad.
+              {sendPushNotification && status === 'published'
+                ? 'Nyheten är publicerad och pushnotisen är skickad.'
+                : 'Nyheten är sparad.'}
             </p>
           )}
 
@@ -509,9 +751,13 @@ function NewsAdminPage({
             )}
 
             {saving
-              ? 'Sparar…'
+              ? sendPushNotification && status === 'published'
+                ? 'Publicerar och skickar…'
+                : 'Sparar…'
               : status === 'published'
-                ? 'Publicera'
+                ? sendPushNotification
+                  ? 'Publicera och skicka push'
+                  : 'Publicera'
                 : 'Spara utkast'}
           </button>
         </form>
@@ -623,6 +869,12 @@ function NewsAdminCard({
                 ? 'Publicerad'
                 : 'Utkast'}
             </span>
+
+            {post.category === 'fundraiser' && (
+              <span className="rounded-full bg-rose-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#68123f]">
+                Insamling
+              </span>
+            )}
 
             {post.isPinned && (
               <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">

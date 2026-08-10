@@ -359,7 +359,7 @@ function JahrzeitForm({
             </span>
 
             <span className="mt-1 block text-xs text-slate-500">
-              Pushnotiser kopplas in senare.
+              Du får en påminnelse inför Jahrzeit.
             </span>
           </span>
 

@@ -20,6 +20,10 @@ import {
   markNewsAsRead,
   subscribeToUserNewsReads,
 } from '../services/newsReadsService'
+import {
+  subscribeToFundraiser,
+  type Fundraiser,
+} from '../services/fundraiserService'
 
 type InformationPageProps = {
   user: AppUser
@@ -44,6 +48,9 @@ function InformationPage({
 
   const [error, setError] =
     useState('')
+
+  const [fundraiser, setFundraiser] =
+    useState<Fundraiser | null>(null)
 
   useEffect(() => {
     /*
@@ -78,6 +85,22 @@ function InformationPage({
   }, [
     user.permissions.viewMemberInformation,
   ])
+
+  useEffect(() => {
+    return subscribeToFundraiser(
+      (nextFundraiser) => {
+        setFundraiser(
+          nextFundraiser,
+        )
+      },
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa aktuell insamling i Nyheter:',
+          caughtError,
+        )
+      },
+    )
+  }, [])
 
   useEffect(() => {
     if (!firebaseUser) {
@@ -150,7 +173,8 @@ function InformationPage({
             <NewsCard
               key={post.id}
               post={post}
-              isRead={
+              fundraiser={fundraiser}
+                isRead={
                 readNewsIds.has(
                   post.id,
                 )
@@ -247,12 +271,14 @@ function InformationPage({
 
 type NewsCardProps = {
   post: NewsPost
+  fundraiser: Fundraiser | null
   isRead: boolean
   onRead: () => void
 }
 
 function NewsCard({
   post,
+  fundraiser,
   isRead,
   onRead,
 }: NewsCardProps) {
@@ -265,7 +291,30 @@ function NewsCard({
         post.createdAt,
     )
 
-  return (
+  
+
+  const isFundraiser =
+    post.category === 'fundraiser'
+
+  const fundraiserGoal =
+    fundraiser?.goalAmount ?? 0
+
+  const fundraiserCurrent =
+    fundraiser?.currentAmount ?? 0
+
+  const fundraiserPercent =
+    fundraiserGoal > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (
+              fundraiserCurrent /
+              fundraiserGoal
+            ) * 100,
+          ),
+        )
+      : 0
+return (
     <article className="w-full overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-slate-200">
       {post.imageUrl && (
         <img
@@ -298,6 +347,54 @@ function NewsCard({
         <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-500">
           {post.excerpt}
         </p>
+
+        {isFundraiser &&
+          fundraiser &&
+          fundraiser.active && (
+            <div className="mt-5 rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#68123f]">
+                    Insamlat
+                  </p>
+
+                  <p className="mt-1 text-2xl font-bold text-[#68123f]">
+                    {fundraiserCurrent.toLocaleString(
+                      'sv-SE',
+                    )}{' '}
+                    kr
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-xs font-semibold text-slate-500">
+                    Mål
+                  </p>
+
+                  <p className="font-bold text-slate-700">
+                    {fundraiserGoal.toLocaleString(
+                      'sv-SE',
+                    )}{' '}
+                    kr
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-[#68123f] transition-all"
+                  style={{
+                    width: `${fundraiserPercent}%`,
+                  }}
+                />
+              </div>
+
+              <p className="mt-2 text-right text-xs font-bold text-[#68123f]">
+                {fundraiserPercent}% av målet
+              </p>
+            </div>
+          )}
+
 
         {open && (
           <div className="mt-4 border-t border-slate-100 pt-4">

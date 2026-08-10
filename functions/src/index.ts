@@ -354,6 +354,150 @@ export const sendMinyanNeedPush =
     },
   );
 
+export const sendNewsPush =
+  onCall(
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError(
+          "unauthenticated",
+          "Du måste vara inloggad.",
+        );
+      }
+
+      const callerSnapshot =
+        await db
+          .collection("users")
+          .doc(request.auth.uid)
+          .get();
+
+      const caller =
+        callerSnapshot.data() as
+          UserData | undefined;
+
+      if (caller?.role !== "admin") {
+        throw new HttpsError(
+          "permission-denied",
+          "Endast admin får skicka nyhetspush.",
+        );
+      }
+
+      const title =
+        typeof request.data?.title ===
+        "string"
+          ? request.data.title.trim()
+          : "";
+
+      const body =
+        typeof request.data?.body ===
+        "string"
+          ? request.data.body.trim()
+          : "";
+
+      if (!title || !body) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Rubrik och ingress krävs.",
+        );
+      }
+
+      const recipients =
+        await getGeneralPushRecipients();
+
+      const result =
+        await sendPushToRecipients(
+          recipients,
+          {
+            title,
+            body,
+            data: {
+              type: "news",
+              url: "/?page=information",
+            },
+          },
+        );
+
+      logger.info(
+        "Nyhetspush skickad",
+        result,
+      );
+
+      return result;
+    },
+  );
+
+async function getGeneralPushRecipients():
+  Promise<PushRecipient[]> {
+  const usersSnapshot =
+    await db
+      .collection("users")
+      .where(
+        "status",
+        "==",
+        "approved",
+      )
+      .get();
+
+  const allowedUserIds =
+    new Set(
+      usersSnapshot.docs.map(
+        (document) =>
+          document.id,
+      ),
+    );
+
+  if (allowedUserIds.size === 0) {
+    return [];
+  }
+
+  const registrationsSnapshot =
+    await db
+      .collection(
+        "pushRegistrations",
+      )
+      .where(
+        "enabled",
+        "==",
+        true,
+      )
+      .get();
+
+  const recipients:
+    PushRecipient[] = [];
+
+  registrationsSnapshot.docs.forEach(
+    (document) => {
+      const registration =
+        document.data() as
+          PushRegistrationData;
+
+      if (
+        !registration.userId ||
+        !registration.installationId
+      ) {
+        return;
+      }
+
+      if (
+        !allowedUserIds.has(
+          registration.userId,
+        )
+      ) {
+        return;
+      }
+
+      recipients.push({
+        documentId:
+          document.id,
+        fid:
+          registration
+            .installationId,
+      });
+    },
+  );
+
+  return recipients;
+}
+
 async function sendTfilaPush(
   message: {
     title: string;

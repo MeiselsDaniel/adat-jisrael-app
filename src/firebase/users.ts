@@ -60,6 +60,7 @@ export type FirebaseUserProfile = {
   name: string
   email: string
   phone?: string
+  birthDate?: string
 
   notificationPreferences?:
     NotificationPreferences
@@ -83,6 +84,7 @@ export type UpdateUserProfileInput = {
   lastName?: string
   name?: string
   phone?: string
+  birthDate?: string
 
   notificationPreferences?:
     NotificationPreferences

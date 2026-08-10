@@ -12,6 +12,12 @@ type MinyanPushResult = {
   failureCount: number
 }
 
+type NewsPushResult = {
+  recipients: number
+  successCount: number
+  failureCount: number
+}
+
 const functions =
   getFunctions(
     app,
@@ -29,12 +35,41 @@ const sendMinyanNeedPushCallable =
     'sendMinyanNeedPush',
   )
 
+const sendNewsPushCallable =
+  httpsCallable<
+    {
+      newsId: string
+      title?: string
+      body?: string
+    },
+    NewsPushResult
+  >(
+    functions,
+    'sendNewsPush',
+  )
+
 export async function sendMinyanNeedPush(
   tefilaId: string,
 ): Promise<MinyanPushResult> {
   const result =
     await sendMinyanNeedPushCallable({
       tefilaId,
+    })
+
+  return result.data
+}
+
+
+export async function sendNewsPush(
+  newsId: string,
+  title?: string,
+  body?: string,
+): Promise<NewsPushResult> {
+  const result =
+    await sendNewsPushCallable({
+      newsId,
+      title,
+      body,
     })
 
   return result.data

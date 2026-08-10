@@ -9,6 +9,11 @@ type BoardContactPageProps = {
   onBack: () => void
 }
 
+const gabaim = [
+  'Daniel Meisels',
+  'Ofer Maimon Gralvik',
+]
+
 const boardMembers = [
   {
     name: 'Daniel Meisels',
@@ -92,6 +97,28 @@ function BoardContactPage({
           ))}
         </div>
       </section>
+
+      <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h2 className="font-bold text-[#183b70]">
+            Gabaim
+          </h2>
+        </div>
+
+        <div className="divide-y divide-slate-100">
+          {gabaim.map((name) => (
+            <div
+              key={name}
+              className="px-5 py-4"
+            >
+              <p className="font-bold text-slate-800">
+                {name}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
 
       <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">

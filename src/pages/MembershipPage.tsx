@@ -60,13 +60,13 @@ function MembershipPage({
           </div>
 
           <h1 className="mt-6 text-2xl font-bold text-[#183b70]">
-            Tack för din ansökan
+            Tack för din medlemsansökan
           </h1>
 
           <p className="mt-3 leading-7 text-slate-500">
-            Din medlemsansökan har skickats till Adat
-            Jisrael. En administratör kommer att behandla
-            den och kontakta dig vid behov.
+            Din medlemsansökan har registrerats och kommer
+        att behandlas av Adat Jisraels styrelse. Vi
+        kontaktar dig med mer information om nästa steg.
           </p>
 
           <div className="mt-6 rounded-2xl bg-sky-50 px-4 py-4 text-left">
@@ -84,9 +84,10 @@ function MembershipPage({
           </div>
 
           <p className="mt-6 text-sm leading-6 text-slate-500">
-            När medlemskapet har godkänts får du automatiskt
-            tillgång till medlemsinformation och
-            kiddushbokning i appen.
+            Fram till dess har du fortsatt tillgång till
+        appen som icke-medlem. När styrelsen har godkänt
+        medlemskapet kan ditt konto uppgraderas till
+        medlem.
           </p>
         </section>
       </div>
@@ -216,11 +217,6 @@ function MembershipPage({
           >
             Tillbaka
           </button>
-
-          <p className="px-4 text-center text-xs leading-5 text-slate-400">
-            Ansökan sparas ännu bara i prototypen. Permanent
-            lagring kopplas in senare.
-          </p>
         </form>
       </div>
     )
@@ -247,14 +243,30 @@ function MembershipPage({
 
       <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <h2 className="text-lg font-bold text-[#183b70]">
-          Som medlem får du
+          Att vara medlem
         </h2>
 
-        <div className="mt-5 space-y-4">
-          <Benefit text="Tillgång till intern information från Adat Jisrael" />
-<Benefit text="Rabatterat pris på aktiviteter och evenemang" />
-<Benefit text="Möjlighet att delta och påverka Adat Jisraels framtid" />
-        </div>
+        <div className="mt-5 space-y-5">
+      <Benefit
+        title="Gemenskap & inflytande"
+        text="Adat Jisrael är inte en tjänst vi nyttjar, utan en gemenskap vi bygger tillsammans. Som medlem är du med och formar församlingen, stödjer verksamheten och bidrar till Adat Jisraels framtid."
+      />
+
+      <Benefit
+        title="Tillgång till hela appen"
+        text="Som icke-medlem har du bara tillgång till en begränsad del av appen. Som medlem får du hela Adat Jisrael-appen med medlemsnyheter och information, aktiviteter, Kiddushbokning, anmälan till minjan och andra medlemsfunktioner."
+      />
+
+      <Benefit
+        title="Judiskt liv i vardagen"
+        text="Appen hjälper dig också att hålla koll på det judiska året och livet i församlingen, med bland annat kalender, tider för tfilot och personliga Jahrzeit-påminnelser."
+      />
+
+      <Benefit
+        title="Medlemsförmåner"
+        text="Som medlem får du medlemspris på utvalda aktiviteter och evenemang och tillgång till sådant som är särskilt för Adat Jisraels medlemmar."
+      />
+    </div>
       </section>
 
       <section className="flex gap-4 rounded-3xl bg-rose-50 p-5">
@@ -313,19 +325,29 @@ function FormField({
 }
 
 type BenefitProps = {
+  title: string
   text: string
 }
 
-function Benefit({ text }: BenefitProps) {
+function Benefit({
+  title,
+  text,
+}: BenefitProps) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+    <div className="flex gap-3">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
         <Check className="h-4 w-4" />
       </div>
 
-      <p className="text-sm leading-6 text-slate-600">
-        {text}
-      </p>
+      <div>
+        <h3 className="font-bold text-slate-800">
+          {title}
+        </h3>
+
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          {text}
+        </p>
+      </div>
     </div>
   )
 }

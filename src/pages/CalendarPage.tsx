@@ -69,7 +69,11 @@ function CalendarPage() {
     )
 
   const canUseTefilaPreferences =
-    canRegisterJahrzeit
+    canRegisterJahrzeit &&
+    (
+      profile?.role === 'admin' ||
+      profile?.countsForMinyan === true
+    )
 
   const [jahrzeits, setJahrzeits] =
     useState<JahrzeitRecord[]>([])
