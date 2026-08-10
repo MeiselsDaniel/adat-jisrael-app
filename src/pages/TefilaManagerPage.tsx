@@ -232,6 +232,9 @@ function TefilaManagerPage({
   const [draftTime, setDraftTime] =
     useState('')
 
+  const [draftTitle, setDraftTitle] =
+    useState('')
+
   const [savingId, setSavingId] =
     useState<string | null>(null)
 
@@ -239,7 +242,7 @@ function TefilaManagerPage({
     useState('')
 
   const [tab, setTab] =
-    useState<TefilaManagerTab>('shabbat')
+    useState<TefilaManagerTab>('weekdays')
 
   const shabbatGroups =
     groupedTfilot
@@ -369,12 +372,17 @@ function TefilaManagerPage({
       normalizeTime(tefila.time),
     )
 
+    setDraftTitle(
+      tefila.title,
+    )
+
     setError('')
   }
 
   function stopEditing() {
     setEditingId(null)
     setDraftTime('')
+    setDraftTitle('')
     setError('')
   }
 
@@ -404,7 +412,9 @@ function TefilaManagerPage({
     try {
       const record: TefilaRecord = {
         id: tefilaId,
-        title: tefila.title,
+        title:
+          draftTitle.trim() ||
+          tefila.title,
         date:
           tefila.dateValue ??
           tefila.date,
@@ -573,6 +583,50 @@ function TefilaManagerPage({
 
                     {isEditing ? (
                       <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+                        {isKabbalatShabbat(tefila) && (
+                          <div className="mb-5">
+                            <p className="text-sm font-bold text-slate-700">
+                              Fredagskvällens tfilah
+                            </p>
+
+                            <div className="mt-2 space-y-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDraftTitle(
+                                    'Kabbalat Shabbat/Maariv',
+                                  )
+                                }
+                                className={`w-full rounded-2xl px-4 py-3 text-sm font-bold ${
+                                  draftTitle ===
+                                  'Kabbalat Shabbat/Maariv'
+                                    ? 'bg-[#183b70] text-white'
+                                    : 'bg-slate-100 text-slate-700'
+                                }`}
+                              >
+                                Kabbalat Shabbat/Maariv
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDraftTitle(
+                                    'Mincha/Kabbalat Shabbat/Maariv',
+                                  )
+                                }
+                                className={`w-full rounded-2xl px-4 py-3 text-sm font-bold ${
+                                  draftTitle ===
+                                  'Mincha/Kabbalat Shabbat/Maariv'
+                                    ? 'bg-[#183b70] text-white'
+                                    : 'bg-slate-100 text-slate-700'
+                                }`}
+                              >
+                                Mincha/Kabbalat Shabbat/Maariv
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         <label className="block">
                           <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
                             <Clock3 className="h-4 w-4" />
@@ -863,7 +917,7 @@ function addKabbalatShabbat(
               date,
             ),
           title:
-            'Kabbalat Shabbat',
+            'Kabbalat Shabbat/Maariv',
           time: kabbalatTime,
           attending: 0,
         } satisfies Tefila

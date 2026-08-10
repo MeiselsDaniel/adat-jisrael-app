@@ -185,6 +185,69 @@ function DaySettingsEditor({
     }
   }
 
+  const previewIsHoliday =
+    dayType === 'holiday' ||
+    dayType === 'shabbatHoliday' ||
+    dayType === 'erevShabbatHoliday' ||
+    dayType === 'erevShabbatErevHoliday'
+
+  const previewIsShabbat =
+    dayType === 'shabbat' ||
+    dayType === 'shabbatHoliday' ||
+    dayType === 'erevShabbatHoliday' ||
+    dayType === 'erevShabbatErevHoliday' ||
+    hebcalInfo.isShabbat ||
+    hebcalInfo.isErevShabbat
+
+  const previewTopLabel = (() => {
+    switch (dayType) {
+      case 'shabbatHoliday':
+        return 'Shabbat · Högtid'
+
+      case 'erevShabbatHoliday':
+        return 'Erev Shabbat · Högtid'
+
+      case 'erevShabbatErevHoliday':
+        return 'Erev Shabbat · Erev högtid'
+
+      case 'holiday':
+        return 'Högtid'
+
+      case 'shabbat':
+        return 'Shabbat'
+
+      default:
+        if (hebcalInfo.isErevShabbat) {
+          return 'Erev Shabbat'
+        }
+
+        if (hebcalInfo.isShabbat) {
+          return 'Shabbat'
+        }
+
+        return 'Vanlig dag'
+    }
+  })()
+
+  const previewTitle =
+    holidayName.trim() ||
+    hebcalInfo.holidayNames[0] ||
+    previewTopLabel
+
+  const previewAccent =
+    previewIsHoliday
+      ? 'bg-amber-700'
+      : previewIsShabbat
+        ? 'bg-[#68123f]'
+        : 'bg-[#183b70]'
+
+  const previewRing =
+    previewIsHoliday
+      ? 'ring-amber-700/25'
+      : previewIsShabbat
+        ? 'ring-[#68123f]/25'
+        : 'ring-slate-200'
+
   return (
     <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
 
@@ -257,9 +320,14 @@ function DaySettingsEditor({
 
       {open && (
         <div className="space-y-5 border-t border-slate-100 p-4">
-          {(dayType === 'shabbat' ||
-            dayType === 'holiday' ||
-            dayType === 'shabbatHoliday') && (
+          {(
+              dayType === 'shabbat' ||
+              dayType === 'holiday' ||
+              dayType === 'shabbatHoliday' ||
+              dayType === 'erevShabbatHoliday' ||
+              dayType === 'erevShabbatErevHoliday'
+            ) && (
+
             <label className="block">
               <span className="text-sm font-bold text-slate-700">
                 Mer information (visas i appen)
@@ -324,12 +392,42 @@ function DaySettingsEditor({
                   )
                 }
               />
+
+              <TypeButton
+                label="Erev Shabbat + högtid"
+                active={
+                  dayType ===
+                  'erevShabbatHoliday'
+                }
+                onClick={() =>
+                  setDayType(
+                    'erevShabbatHoliday',
+                  )
+                }
+              />
+
+              <TypeButton
+                label="Erev Shabbat + Erev högtid"
+                active={
+                  dayType ===
+                  'erevShabbatErevHoliday'
+                }
+                onClick={() =>
+                  setDayType(
+                    'erevShabbatErevHoliday',
+                  )
+                }
+              />
             </div>
           </div>
 
-          {(dayType === 'holiday' ||
-            dayType ===
-              'shabbatHoliday') && (
+          {(
+              dayType === 'holiday' ||
+              dayType === 'shabbatHoliday' ||
+              dayType === 'erevShabbatHoliday' ||
+              dayType === 'erevShabbatErevHoliday'
+            ) && (
+
             <label className="block">
               <span className="text-sm font-bold text-slate-700">
                 Högtidens namn
@@ -347,6 +445,108 @@ function DaySettingsEditor({
               />
             </label>
           )}
+            {(previewIsShabbat ||
+              previewIsHoliday) && (
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-slate-700">
+                  Förhandsvisning i appen
+                </p>
+
+                <article
+                  className={`overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ${previewRing}`}
+                >
+                  <div
+                    className={`${previewAccent} px-5 py-3 text-white`}
+                  >
+                    <p className="text-sm font-bold uppercase tracking-wide">
+                      {previewTopLabel}
+                    </p>
+                  </div>
+
+                  <div className="p-5">
+                    <p className="text-sm font-semibold text-slate-500">
+                      {dateValue}
+                    </p>
+
+                    <h3 className="mt-1 text-xl font-bold text-[#183b70]">
+                      {previewTitle}
+                    </h3>
+
+                    {hebcalInfo.hebrewDate && (
+                      <p className="mt-1 text-sm font-semibold text-slate-500">
+                        {hebcalInfo.hebrewDate}
+                      </p>
+                    )}
+
+                    {showCandleLighting &&
+                      (
+                        customCandleLightingTime ||
+                        hebcalInfo.candleLightingTime
+                      ) && (
+                        <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
+                          <span className="text-sm font-semibold text-slate-500">
+                            Ljuständning
+                          </span>
+
+                          <span className="font-bold text-slate-800">
+                            {customCandleLightingTime ||
+                              hebcalInfo.candleLightingTime}
+                          </span>
+                        </div>
+                      )}
+
+                    {sermon.trim() && (
+                      <div className="mt-4 border-t border-slate-100 pt-4">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                          Predikan
+                        </p>
+
+                        <p className="mt-1 font-semibold text-slate-800">
+                          {sermon.trim()}
+                        </p>
+                      </div>
+                    )}
+
+                    {showHavdala &&
+                      (
+                        customHavdalaTime ||
+                        hebcalInfo.havdalaTime
+                      ) && (
+                        <div className="mt-4 flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
+                          <span className="text-sm font-semibold text-slate-500">
+                            Havdala
+                          </span>
+
+                          <span className="font-bold text-slate-800">
+                            {customHavdalaTime ||
+                              hebcalInfo.havdalaTime}
+                          </span>
+                        </div>
+                      )}
+
+                    {comment.trim() && (
+                      <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+                        {comment.trim()}
+                      </div>
+                    )}
+
+                    {moreInformation.trim() && (
+                      <div className="mt-4 rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#183b70]">
+                          Mer information
+                        </p>
+
+                        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
+                          {moreInformation.trim()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              </div>
+            )}
+
+
 
           <Toggle
             label="Visa ljuständning"
@@ -627,6 +827,12 @@ function getDayTypeLabel(
 
     case 'shabbatHoliday':
       return 'Shabbat + högtid'
+
+    case 'erevShabbatHoliday':
+      return 'Erev Shabbat + högtid'
+
+    case 'erevShabbatErevHoliday':
+      return 'Erev Shabbat + Erev högtid'
 
     default:
       return 'Vanlig dag'

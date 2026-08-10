@@ -15,6 +15,10 @@ export type DayType =
   | 'shabbat'
   | 'holiday'
   | 'shabbatHoliday'
+  | 'erevShabbatHoliday'
+  | 'erevShabbatErevHoliday'
+  | 'erevShabbatHoliday'
+  | 'erevShabbatErevHoliday'
 
 export type DaySettings = {
   id: string

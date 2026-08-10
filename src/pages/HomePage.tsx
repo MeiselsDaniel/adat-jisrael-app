@@ -84,7 +84,7 @@ const kabbalatShabbat: Tefila = {
   dateValue: fridayDateValue,
   day: 'Fredag',
   date: formatSwedishDate(nextFriday),
-  title: 'Kabbalat Shabbat',
+  title: 'Kabbalat Shabbat/Maariv',
   time: scheduleWithKabbalat.kabbalatShabbat ?? '19.30',
   attending: 0,
 }
@@ -96,7 +96,7 @@ const secondKabbalatShabbat: Tefila = {
   dateValue: secondFridayDateValue,
   day: 'Fredag',
   date: formatSwedishDate(secondFriday),
-  title: 'Kabbalat Shabbat',
+  title: 'Kabbalat Shabbat/Maariv',
   time:
     scheduleWithKabbalat.kabbalatShabbat ??
     '19.30',
@@ -833,9 +833,12 @@ function ProgramCard({
   }, [cardSaturdayDateValue])
 
   const isHoliday =
-    daySettings?.dayType === 'holiday' ||
-    daySettings?.dayType === 'shabbatHoliday' ||
-    shabbatHebcalInfo.isHoliday
+      daySettings?.dayType === 'holiday' ||
+      daySettings?.dayType === 'shabbatHoliday' ||
+      daySettings?.dayType === 'erevShabbatHoliday' ||
+      daySettings?.dayType ===
+        'erevShabbatErevHoliday' ||
+      shabbatHebcalInfo.isHoliday
 
   const customHolidayName =
     daySettings?.holidayName?.trim()

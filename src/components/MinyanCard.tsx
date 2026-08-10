@@ -115,7 +115,9 @@ function MinyanCard({
         : 'bg-rose-100 text-rose-900'
 
   const isKabbalatShabbat =
-    tefila.title === 'Kabbalat Shabbat'
+    tefila.title
+      .toLowerCase()
+      .includes('kabbalat shabbat')
 
   function openGuestForm() {
     setDraftGuestCount(

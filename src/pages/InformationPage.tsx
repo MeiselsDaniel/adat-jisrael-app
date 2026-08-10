@@ -1,5 +1,4 @@
 import {
-  Bell,
   CalendarDays,
   ChevronRight,
   ChevronUp,
@@ -156,7 +155,7 @@ function InformationPage({
       </section>
 
       {error && (
-        <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+        <p className="rounded-2xl bg-sky-50 px-4 py-3 text-sm font-semibold text-rose-800">
           {error}
         </p>
       )}
@@ -252,19 +251,6 @@ function InformationPage({
         </section>
       )}
 
-      <section className="flex gap-3 rounded-3xl bg-sky-50 p-5">
-        <Bell className="h-6 w-6 shrink-0 text-[#183b70]" />
-
-        <div>
-          <p className="font-bold text-[#183b70]">
-            Notiser kommer senare
-          </p>
-
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            Viktiga meddelanden kommer även kunna skickas som pushnotiser.
-          </p>
-        </div>
-      </section>
     </div>
   )
 }
@@ -351,14 +337,14 @@ return (
         {isFundraiser &&
           fundraiser &&
           fundraiser.active && (
-            <div className="mt-5 rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100">
+            <div className="mt-5 rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-[#68123f]">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#183b70]">
                     Insamlat
                   </p>
 
-                  <p className="mt-1 text-2xl font-bold text-[#68123f]">
+                  <p className="mt-1 text-2xl font-bold text-[#183b70]">
                     {fundraiserCurrent.toLocaleString(
                       'sv-SE',
                     )}{' '}
@@ -380,16 +366,16 @@ return (
                 </div>
               </div>
 
-              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-sky-100">
                 <div
-                  className="h-full rounded-full bg-[#68123f] transition-all"
+                  className="h-full rounded-full bg-[#183b70] transition-all"
                   style={{
                     width: `${fundraiserPercent}%`,
                   }}
                 />
               </div>
 
-              <p className="mt-2 text-right text-xs font-bold text-[#68123f]">
+              <p className="mt-2 text-right text-xs font-bold text-[#183b70]">
                 {fundraiserPercent}% av målet
               </p>
             </div>
