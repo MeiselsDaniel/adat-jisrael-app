@@ -199,19 +199,30 @@ function DaySettingsEditor({
     hebcalInfo.isShabbat ||
     hebcalInfo.isErevShabbat
 
+  const previewHolidayName =
+    holidayName.trim() ||
+    hebcalInfo.holidayNames[0] ||
+    ''
+
   const previewTopLabel = (() => {
     switch (dayType) {
       case 'shabbatHoliday':
-        return 'Shabbat · Högtid'
+        return previewHolidayName
+          ? `${previewHolidayName} · Shabbat`
+          : 'Shabbat'
 
       case 'erevShabbatHoliday':
-        return 'Erev Shabbat · Högtid'
+        return previewHolidayName
+          ? `${previewHolidayName} · Erev Shabbat`
+          : 'Erev Shabbat'
 
       case 'erevShabbatErevHoliday':
-        return 'Erev Shabbat · Erev högtid'
+        return previewHolidayName
+          ? `Erev ${previewHolidayName} · Erev Shabbat`
+          : 'Erev Shabbat'
 
       case 'holiday':
-        return 'Högtid'
+        return previewHolidayName || 'Högtid'
 
       case 'shabbat':
         return 'Shabbat'
