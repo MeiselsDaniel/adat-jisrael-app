@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { HDate } from '@hebcal/core'
 import {
   createJahrzeit,
   updateJahrzeit,
@@ -89,7 +90,36 @@ function JahrzeitForm({
         ?.hebrewMonth ?? '',
     )
 
-  const [remind, setRemind] =
+  const [
+showDateConverter,
+setShowDateConverter,
+] = useState(false)
+
+const [
+gregorianDate,
+setGregorianDate,
+] = useState('')
+
+const [
+afterSunset,
+setAfterSunset,
+] = useState(false)
+
+const [
+convertedHebrewDate,
+setConvertedHebrewDate,
+] = useState<{
+day: number
+month: string
+year: number
+} | null>(null)
+
+const [
+converterError,
+setConverterError,
+] = useState('')
+
+const [remind, setRemind] =
     useState(
       existingJahrzeit
         ?.remind ?? true,
@@ -101,7 +131,87 @@ function JahrzeitForm({
   const [error, setError] =
     useState('')
 
-  async function handleSubmit(
+  function convertGregorianDate() {
+  setConverterError('')
+  setConvertedHebrewDate(null)
+
+  if (!gregorianDate) {
+    setConverterError(
+      'Välj datum för dödsfallet.',
+    )
+    return
+  }
+
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})$/
+      .exec(gregorianDate)
+
+  if (!match) {
+    setConverterError(
+      'Datumet kunde inte läsas.',
+    )
+    return
+  }
+
+  const date =
+    new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+      12,
+      0,
+      0,
+      0,
+    )
+
+  if (afterSunset) {
+    date.setDate(
+      date.getDate() + 1,
+    )
+  }
+
+  try {
+    const hebrewDate =
+      new HDate(date)
+
+    setConvertedHebrewDate({
+      day:
+        hebrewDate.getDate(),
+      month:
+        hebrewDate.getMonthName(),
+      year:
+        hebrewDate.getFullYear(),
+    })
+  } catch (caughtError) {
+    console.error(
+      caughtError,
+    )
+
+    setConverterError(
+      'Kunde inte räkna ut det judiska datumet.',
+    )
+  }
+}
+
+function useConvertedDate() {
+  if (!convertedHebrewDate) {
+    return
+  }
+
+  setHebrewDay(
+    String(
+      convertedHebrewDate.day,
+    ),
+  )
+
+  setHebrewMonth(
+    convertedHebrewDate.month,
+  )
+
+  setShowDateConverter(false)
+}
+
+async function handleSubmit(
     event: FormEvent,
   ) {
     event.preventDefault()
@@ -332,6 +442,107 @@ function JahrzeitForm({
               )}
             </select>
           </label>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+          <button
+            type="button"
+            onClick={() =>
+              setShowDateConverter(
+                (current) => !current,
+              )
+            }
+            className="text-left text-sm font-bold text-[#183b70]"
+          >
+            Vet du inte det judiska datumet? Räkna ut här
+          </button>
+
+          {showDateConverter && (
+            <div className="mt-4 space-y-4">
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">
+                  Datum för dödsfallet
+                </span>
+
+                <input
+                  type="date"
+                  value={gregorianDate}
+                  onChange={(event) => {
+                    setGregorianDate(
+                      event.target.value,
+                    )
+                    setConvertedHebrewDate(
+                      null,
+                    )
+                    setConverterError('')
+                  }}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                />
+              </label>
+
+              <label className="flex items-center justify-between gap-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                <span>
+                  <span className="block text-sm font-bold text-slate-800">
+                    Efter solnedgången
+                  </span>
+
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">
+                    Markera detta om dödsfallet skedde efter solnedgången.
+                  </span>
+                </span>
+
+                <input
+                  type="checkbox"
+                  checked={afterSunset}
+                  onChange={(event) => {
+                    setAfterSunset(
+                      event.target.checked,
+                    )
+                    setConvertedHebrewDate(
+                      null,
+                    )
+                  }}
+                  className="h-5 w-5 accent-[#68123f]"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={convertGregorianDate}
+                className="w-full rounded-2xl bg-sky-50 px-4 py-3 text-sm font-bold text-[#183b70] ring-1 ring-sky-200"
+              >
+                Räkna ut judiskt datum
+              </button>
+
+              {convertedHebrewDate && (
+                <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
+                  <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+                    Judiskt datum
+                  </p>
+
+                  <p className="mt-1 text-lg font-bold text-slate-900">
+                    {convertedHebrewDate.day}{' '}
+                    {convertedHebrewDate.month}{' '}
+                    {convertedHebrewDate.year}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={useConvertedDate}
+                    className="mt-3 w-full rounded-xl bg-[#68123f] px-4 py-2.5 text-sm font-bold text-white"
+                  >
+                    Använd detta datum
+                  </button>
+                </div>
+              )}
+
+              {converterError && (
+                <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+                  {converterError}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <label className="block">

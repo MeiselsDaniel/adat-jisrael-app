@@ -7,7 +7,9 @@ import {
   type FidMulticastMessage,
 } from "firebase-admin/messaging";
 import {setGlobalOptions} from "firebase-functions";
+import {defineSecret} from "firebase-functions/params";
 import {
+  onDocumentCreated,
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore";
 import {
@@ -25,6 +27,9 @@ setGlobalOptions({
 
 const db = getFirestore();
 
+const BREVO_API_KEY =
+  defineSecret("BREVO_API_KEY");
+
 type TefilaData = {
   id?: string;
   title?: string;
@@ -34,6 +39,9 @@ type TefilaData = {
 };
 
 type UserData = {
+  name?: string;
+  email?: string;
+  status?: string;
   role?: string;
   countsForMinyan?: boolean;
   notificationPreferences?: {
@@ -63,6 +71,414 @@ type SendResult = {
   successCount: number;
   failureCount: number;
 };
+
+export const notifyAdminNewAppAccount =
+  onDocumentCreated(
+    {
+      document: "users/{userId}",
+      secrets: [BREVO_API_KEY],
+    },
+    async (event) => {
+      const user =
+        event.data?.data() as
+          UserData | undefined;
+
+      if (!user) {
+        return;
+      }
+
+      /*
+       * Bara riktiga väntande kontoansökningar.
+       * Om ett dokument skapas direkt som approved
+       * ska inget adminmejl skickas.
+       */
+      if (user.status !== "pending") {
+        return;
+      }
+
+      const name =
+        user.name?.trim() ||
+        "Okänd användare";
+
+      const email =
+        user.email?.trim() || "";
+
+      const htmlContent = `
+        <!doctype html>
+        <html lang="sv">
+          <body style="
+            margin:0;
+            padding:0;
+            background:#f8fafc;
+            font-family:Arial,sans-serif;
+            color:#1e293b;
+          ">
+            <div style="
+              max-width:560px;
+              margin:0 auto;
+              padding:32px 20px;
+            ">
+              <div style="
+                background:#ffffff;
+                border-radius:20px;
+                padding:32px;
+                border:1px solid #e2e8f0;
+              ">
+                <div style="
+                  color:#183b70;
+                  font-size:14px;
+                  font-weight:700;
+                  margin-bottom:8px;
+                ">
+                  ADAT JISRAEL
+                </div>
+
+                <h1 style="
+                  margin:0 0 20px;
+                  color:#183b70;
+                  font-size:26px;
+                  line-height:1.25;
+                ">
+                  Ny kontoansökan
+                </h1>
+
+                <p style="
+                  font-size:16px;
+                  line-height:1.7;
+                  margin:0 0 16px;
+                ">
+                  ${escapeHtml(name)} har ansökt om
+                  ett konto i Adat Jisrael-appen.
+                </p>
+
+                ${
+                  email
+                    ? `
+                      <p style="
+                        font-size:15px;
+                        line-height:1.7;
+                        margin:0 0 24px;
+                        color:#475569;
+                      ">
+                        E-post:
+                        <strong>
+                          ${escapeHtml(email)}
+                        </strong>
+                      </p>
+                    `
+                    : ""
+                }
+
+                <a
+                  href="https://app.adatjisrael.se/"
+                  style="
+                    display:inline-block;
+                    background:#183b70;
+                    color:#ffffff;
+                    text-decoration:none;
+                    font-weight:700;
+                    padding:13px 20px;
+                    border-radius:12px;
+                  "
+                >
+                  Öppna Adat Jisrael
+                </a>
+
+                <p style="
+                  font-size:14px;
+                  line-height:1.6;
+                  color:#64748b;
+                  margin:28px 0 0;
+                ">
+                  Logga in i administrationen för
+                  att granska ansökan.
+                </p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const response =
+        await fetch(
+          "https://api.brevo.com/v3/smtp/email",
+          {
+            method: "POST",
+            headers: {
+              "accept": "application/json",
+              "api-key":
+                BREVO_API_KEY.value(),
+              "content-type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              sender: {
+                name: "Adat Jisrael",
+                email:
+                  "info@adatjisrael.se",
+              },
+              to: [
+                {
+                  email:
+                    "info@adatjisrael.se",
+                  name: "Adat Jisrael",
+                },
+              ],
+              subject:
+                "Ny kontoansökan i Adat Jisrael-appen",
+              htmlContent,
+            }),
+          },
+        );
+
+      if (!response.ok) {
+        const errorText =
+          await response.text();
+
+        logger.error(
+          "Brevo kunde inte skicka adminmejl",
+          {
+            userId: event.params.userId,
+            status: response.status,
+            response: errorText,
+          },
+        );
+
+        throw new Error(
+          `Brevo svarade ${response.status}`,
+        );
+      }
+
+      const result =
+        await response.json() as {
+          messageId?: string;
+        };
+
+      logger.info(
+        "Adminmejl om ny kontoansökan skickat",
+        {
+          userId: event.params.userId,
+          messageId:
+            result.messageId ?? null,
+        },
+      );
+    },
+  );
+
+export const notifyApprovedAppAccount =
+  onDocumentUpdated(
+    {
+      document: "users/{userId}",
+      secrets: [BREVO_API_KEY],
+    },
+    async (event) => {
+      const before =
+        event.data?.before.data() as
+          UserData | undefined;
+
+      const after =
+        event.data?.after.data() as
+          UserData | undefined;
+
+      if (!before || !after) {
+        return;
+      }
+
+      /*
+       * Skicka bara när kontot går FRÅN
+       * något annat läge TILL approved.
+       *
+       * Senare profiländringar på ett redan
+       * godkänt konto skickar alltså inget nytt mejl.
+       */
+      if (
+        before.status === "approved" ||
+        after.status !== "approved"
+      ) {
+        return;
+      }
+
+      const email =
+        after.email?.trim();
+
+      const name =
+        after.name?.trim() ||
+        "Hej";
+
+      if (!email) {
+        logger.error(
+          "Godkänt konto saknar mejladress",
+          {
+            userId: event.params.userId,
+          },
+        );
+
+        return;
+      }
+
+      const firstName =
+        name === "Hej"
+          ? ""
+          : name.split(/\s+/)[0];
+
+      const greeting =
+        firstName
+          ? `Hej ${escapeHtml(firstName)}!`
+          : "Hej!";
+
+      const htmlContent = `
+        <!doctype html>
+        <html lang="sv">
+          <body style="
+            margin:0;
+            padding:0;
+            background:#f8fafc;
+            font-family:Arial,sans-serif;
+            color:#1e293b;
+          ">
+            <div style="
+              max-width:560px;
+              margin:0 auto;
+              padding:32px 20px;
+            ">
+              <div style="
+                background:#ffffff;
+                border-radius:20px;
+                padding:32px;
+                border:1px solid #e2e8f0;
+              ">
+                <div style="
+                  color:#183b70;
+                  font-size:14px;
+                  font-weight:700;
+                  margin-bottom:8px;
+                ">
+                  ADAT JISRAEL
+                </div>
+
+                <h1 style="
+                  margin:0 0 20px;
+                  color:#183b70;
+                  font-size:26px;
+                  line-height:1.25;
+                ">
+                  Ditt konto är godkänt
+                </h1>
+
+                <p style="
+                  font-size:16px;
+                  line-height:1.7;
+                  margin:0 0 16px;
+                ">
+                  ${greeting}
+                </p>
+
+                <p style="
+                  font-size:16px;
+                  line-height:1.7;
+                  margin:0 0 24px;
+                ">
+                  Ditt konto i Adat Jisraels medlemsapp
+                  har nu godkänts. Du kan logga in med
+                  den mejladress och det lösenord du
+                  valde när du registrerade dig.
+                </p>
+
+                <a
+                  href="https://app.adatjisrael.se/"
+                  style="
+                    display:inline-block;
+                    background:#183b70;
+                    color:#ffffff;
+                    text-decoration:none;
+                    font-weight:700;
+                    padding:13px 20px;
+                    border-radius:12px;
+                  "
+                >
+                  Öppna Adat Jisrael
+                </a>
+
+                <p style="
+                  font-size:14px;
+                  line-height:1.6;
+                  color:#64748b;
+                  margin:28px 0 0;
+                ">
+                  Välkommen till Adat Jisrael.
+                </p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const response =
+        await fetch(
+          "https://api.brevo.com/v3/smtp/email",
+          {
+            method: "POST",
+            headers: {
+              "accept": "application/json",
+              "api-key":
+                BREVO_API_KEY.value(),
+              "content-type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              sender: {
+                name: "Adat Jisrael",
+                email:
+                  "info@adatjisrael.se",
+              },
+              to: [
+                {
+                  email,
+                  name:
+                    after.name?.trim() ||
+                    undefined,
+                },
+              ],
+              subject:
+                "Ditt konto hos Adat Jisrael är godkänt",
+              htmlContent,
+            }),
+          },
+        );
+
+      if (!response.ok) {
+        const errorText =
+          await response.text();
+
+        logger.error(
+          "Brevo kunde inte skicka godkännandemejl",
+          {
+            userId: event.params.userId,
+            status: response.status,
+            response: errorText,
+          },
+        );
+
+        throw new Error(
+          `Brevo svarade ${response.status}`,
+        );
+      }
+
+      const result =
+        await response.json() as {
+          messageId?: string;
+        };
+
+      logger.info(
+        "Godkännandemejl skickat",
+        {
+          userId: event.params.userId,
+          messageId:
+            result.messageId ?? null,
+        },
+      );
+    },
+  );
 
 export const notifyCancelledTefila =
   onDocumentUpdated(
@@ -777,6 +1193,17 @@ async function sendPushToRecipients(
     successCount,
     failureCount,
   };
+}
+
+function escapeHtml(
+  value: string,
+): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function normalizeTime(

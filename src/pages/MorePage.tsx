@@ -17,15 +17,6 @@ type MorePageProps = {
   openProfile: () => void
 }
 
-const categoryNames = {
-  member: 'Medlem',
-  nonMember: 'Icke medlem',
-  guest: 'Gäst',
-  staff: 'Personal',
-  rabbi: 'Rabbin',
-  board: 'Styrelse',
-}
-
 function MorePage({
   user,
   onLogout,
@@ -47,10 +38,6 @@ function MorePage({
         <h2 className="mt-4 text-xl font-bold">
           {user.name}
         </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          {categoryNames[user.category]}
-        </p>
 
         <div className="mt-5 flex items-center gap-3 border-t border-slate-200 pt-5 text-sm text-slate-600">
           <Mail className="h-5 w-5 text-slate-400" />
