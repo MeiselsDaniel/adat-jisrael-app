@@ -9,6 +9,7 @@ import {
   Mail,
   User,
 } from 'lucide-react'
+import { resetPassword } from '../firebase/auth'
 import { useAuth } from '../hooks/useAuth'
 
 type LoginMode = 'login' | 'register'
@@ -37,11 +38,54 @@ function LoginPage() {
 
   const [error, setError] = useState('')
 
+  const [resetMessage, setResetMessage] =
+    useState('')
+
+  const [
+    resettingPassword,
+    setResettingPassword,
+  ] = useState(false)
+
   function changeMode(nextMode: LoginMode) {
     setMode(nextMode)
     setError('')
     setPassword('')
     setConfirmPassword('')
+  }
+
+  async function handlePasswordReset() {
+    setError('')
+    setResetMessage('')
+
+    const normalizedEmail =
+      email.trim().toLowerCase()
+
+    if (!normalizedEmail) {
+      setError(
+        'Skriv in din e-postadress först.',
+      )
+      return
+    }
+
+    try {
+      setResettingPassword(true)
+
+      await resetPassword(
+        normalizedEmail,
+      )
+
+      setResetMessage(
+        'Vi har skickat ett mejl med en länk för att välja ett nytt lösenord.',
+      )
+    } catch (caughtError) {
+      setError(
+        getFirebaseErrorMessage(
+          caughtError,
+        ),
+      )
+    } finally {
+      setResettingPassword(false)
+    }
   }
 
   async function handleSubmit(
@@ -215,6 +259,21 @@ function LoginPage() {
               }
             />
 
+            {mode === 'login' && (
+              <div className="-mt-1 text-right">
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  disabled={resettingPassword}
+                  className="text-sm font-semibold text-[#183b70] hover:underline disabled:opacity-60"
+                >
+                  {resettingPassword
+                    ? 'Skickar...'
+                    : 'Glömt lösenordet?'}
+                </button>
+              </div>
+            )}
+
             {mode === 'register' && (
               <PasswordField
                 label="Bekräfta lösenord"
@@ -226,6 +285,12 @@ function LoginPage() {
                 }
                 autoComplete="new-password"
               />
+            )}
+
+            {resetMessage && (
+              <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold leading-6 text-emerald-800">
+                {resetMessage}
+              </div>
             )}
 
             {error && (

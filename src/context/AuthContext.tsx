@@ -141,57 +141,72 @@ export function AuthProvider({
   }
 
   async function register({
+firstName,
+lastName,
+email,
+password,
+phone,
+}: RegisterAccountInput) {
+setAuthError(null)
+
+const normalizedEmail =
+  email.trim().toLowerCase()
+
+const credential = await registerUser(
+  normalizedEmail,
+  password,
+)
+
+/*
+ * Radera Authentication-kontot endast
+ * om själva Firestore-profilen inte kan skapas.
+ */
+try {
+  await createUserProfile({
+    uid: credential.user.uid,
     firstName,
     lastName,
-    email,
-    password,
+    email: normalizedEmail,
     phone,
-  }: RegisterAccountInput) {
-    setAuthError(null)
-
-    const normalizedEmail =
-      email.trim().toLowerCase()
-
-    const credential = await registerUser(
-      normalizedEmail,
-      password,
+  })
+} catch (error) {
+  try {
+    await deleteUser(
+      credential.user,
     )
-
-    try {
-      await createUserProfile({
-        uid: credential.user.uid,
-        firstName,
-        lastName,
-        email: normalizedEmail,
-        phone,
-      })
-
-      const createdProfile =
-        await getUserProfile(
-          credential.user.uid,
-        )
-
-      setProfile(createdProfile)
-    } catch (error) {
-      /*
-       * Om Firestore-skrivningen misslyckas tar vi bort
-       * det nyss skapade Authentication-kontot.
-       * Då lämnas inget konto utan användarprofil.
-       */
-      try {
-        await deleteUser(credential.user)
-      } catch (deleteError) {
-        console.error(
-          'Kunde inte återställa det skapade kontot:',
-          deleteError,
-        )
-      }
-
-      throw error
-    }
+  } catch (deleteError) {
+    console.error(
+      'Kunde inte återställa det skapade kontot:',
+      deleteError,
+    )
   }
 
-  async function logout() {
+  throw error
+}
+
+/*
+ * Profilen finns nu i Firestore.
+ * Om den inte kan läsas direkt får vi
+ * inte radera Authentication-kontot.
+ */
+try {
+  const createdProfile =
+    await getUserProfile(
+      credential.user.uid,
+    )
+
+  setProfile(createdProfile)
+} catch (error) {
+  console.error(
+    'Kontot skapades men profilen kunde inte läsas direkt:',
+    error,
+  )
+
+  setProfile(null)
+}
+}
+
+async function logout() {
     setAuthError(null)
     await logoutUser()
     setProfile(null)

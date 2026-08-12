@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth'
@@ -29,4 +30,15 @@ export async function loginUser(
 
 export async function logoutUser() {
   return signOut(auth)
+}
+
+export async function resetPassword(
+  email: string,
+) {
+  auth.languageCode = 'sv'
+
+  return sendPasswordResetEmail(
+    auth,
+    email.trim().toLowerCase(),
+  )
 }
