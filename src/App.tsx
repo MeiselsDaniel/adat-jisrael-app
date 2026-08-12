@@ -315,7 +315,7 @@ function App() {
           userName={currentUser.name}
         />
 
-        <main className="flex-1 px-4 pb-28 pt-5">
+        <main className="flex-1 px-4 pb-32 pt-5">
           {page === 'home' && (
             <HomePage />
           )}

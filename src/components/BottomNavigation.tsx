@@ -109,7 +109,7 @@ function BottomNavigation({
 
   if (!isMember) {
     return (
-      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-slate-200 bg-white/95 px-3 pb-5 pt-2 backdrop-blur">
+      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-slate-200 bg-white/95 px-3 pt-2 backdrop-blur [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
         <NavButton
           active={page === 'home'}
           label="Hem"
@@ -142,7 +142,7 @@ function BottomNavigation({
   }
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 border-t border-slate-200 bg-white/95 px-2 pb-5 pt-2 backdrop-blur">
+    <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 border-t border-slate-200 bg-white/95 px-2 pt-2 backdrop-blur [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
       <NavButton
         active={page === 'home'}
         label="Hem"
