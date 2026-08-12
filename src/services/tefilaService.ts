@@ -28,6 +28,11 @@ export type MinyanResult =
   | 'confirmed'
   | 'notConfirmed'
 
+export type TefilaKind =
+  | 'regular'
+  | 'erevHoliday'
+  | 'holiday'
+
 export type TefilaRecord = {
   id: string
   title: string
@@ -35,6 +40,7 @@ export type TefilaRecord = {
   time: string
   status: TefilaStatus
   allowRegistration: boolean
+  kind?: TefilaKind
 
   minyanResult?: MinyanResult
   actualAttendance?: number
@@ -118,6 +124,41 @@ export async function saveTefila(
     {
       merge: true,
     },
+  )
+}
+
+export async function deleteTefila(
+  tefilaId: string,
+): Promise<void> {
+  /*
+   * Firestore raderar inte subcollections automatiskt.
+   * Ta därför först bort eventuella anmälningar.
+   */
+  const registrationsSnapshot =
+    await getDocs(
+      collection(
+        db,
+        'tfilot',
+        tefilaId,
+        'registrations',
+      ),
+    )
+
+  await Promise.all(
+    registrationsSnapshot.docs.map(
+      (registration) =>
+        deleteDoc(
+          registration.ref,
+        ),
+    ),
+  )
+
+  await deleteDoc(
+    doc(
+      db,
+      'tfilot',
+      tefilaId,
+    ),
   )
 }
 

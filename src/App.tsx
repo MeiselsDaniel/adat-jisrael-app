@@ -120,6 +120,26 @@ function App() {
     return unsubscribe
   }, [firebaseUser])
 
+  function handleBottomNavigation(
+    nextPage: Page,
+  ) {
+    const samePage =
+      nextPage === page &&
+      !adminOpen
+
+    if (samePage) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      })
+      return
+    }
+
+    setPage(nextPage)
+    setAdminOpen(false)
+    setAdminView('dashboard')
+  }
+
   async function handleLogout() {
     await logout()
     setPage('home')
@@ -275,11 +295,7 @@ function App() {
         <BottomNavigation
           page={page}
           user={currentUser}
-          setPage={(nextPage) => {
-            setPage(nextPage)
-            setAdminOpen(false)
-            setAdminView('dashboard')
-          }}
+          setPage={handleBottomNavigation}
         />
       </div>
     )
@@ -371,7 +387,7 @@ function App() {
 
         <BottomNavigation
           page={page}
-          setPage={setPage}
+          setPage={handleBottomNavigation}
           user={currentUser}
         />
       </div>

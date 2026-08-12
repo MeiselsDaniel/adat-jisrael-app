@@ -9,6 +9,7 @@ import {
   Check,
   Clock3,
   Pencil,
+  Trash2,
   X,
 } from 'lucide-react'
 import DaySettingsEditor from '../components/DaySettingsEditor'
@@ -17,6 +18,7 @@ import TefilaInvitePanel from '../components/TefilaInvitePanel'
 import { synagogueSettings } from '../data/settings'
 import { getHebcalDayInfo } from '../services/hebcalService'
 import {
+  deleteTefila,
   saveTefila,
   subscribeToTfilotBetween,
   type TefilaRecord,
@@ -124,6 +126,10 @@ function TefilaManagerPage({
                 record.title,
               time:
                 record.time,
+                kind:
+                  record.kind,
+                allowRegistration:
+                  record.allowRegistration,
               dateValue:
                 record.date,
               day:
@@ -172,6 +178,10 @@ function TefilaManagerPage({
                 time:
                   record.time,
                 attending: 0,
+                kind:
+                  record.kind,
+                allowRegistration:
+                  record.allowRegistration,
               }
             },
           )
@@ -238,6 +248,9 @@ function TefilaManagerPage({
   const [savingId, setSavingId] =
     useState<string | null>(null)
 
+  const [deletingId, setDeletingId] =
+    useState<string | null>(null)
+
   const [error, setError] =
     useState('')
 
@@ -255,41 +268,67 @@ function TefilaManagerPage({
         const weekday =
           date.getDay()
 
+
+          // Lördag ska alltid visas under Shabbat & helger.
+          // Själva programmet kan ligga helt i Dagsinställningar.
+          if (weekday === 6) {
+            return group
+          }
+
         const hebcal =
           getHebcalDayInfo(
             group.dateValue,
           )
 
-        // Lördag: hela gruppen
-        if (weekday === 6) {
-          return group
-        }
+        const packagedHolidayTfilot =
+          group.tfilot.filter(
+            (tefila) =>
+              tefila.kind === 'erevHoliday' ||
+              tefila.kind === 'holiday',
+          )
 
-        // Fredag: bara Kabbalat Shabbat
-        if (weekday === 5) {
-          const kabbalat =
-            group.tfilot.filter(
-              (tefila) =>
-                isKabbalatShabbat(
-                  tefila,
-                ),
-            )
+        const baseHolidayTfilot =
+          (() => {
+            if (weekday === 6) {
+              return group.tfilot
+            }
 
-          return kabbalat.length > 0
-            ? {
-                ...group,
-                tfilot: kabbalat,
-              }
-            : null
-        }
+            if (weekday === 5) {
+              return group.tfilot.filter(
+                (tefila) =>
+                  isKabbalatShabbat(
+                    tefila,
+                  ),
+              )
+            }
 
-        // Övriga riktiga helgdagar
-        const isActualHoliday =
-          hebcal.holidayNames.length > 0 &&
-          !hebcal.isErevHoliday
+            const isActualHoliday =
+              hebcal.holidayNames.length > 0 &&
+              !hebcal.isErevHoliday
 
-        return isActualHoliday
-          ? group
+            return isActualHoliday
+              ? group.tfilot
+              : []
+          })()
+
+        const combined =
+          Array.from(
+            new Map(
+              [
+                ...baseHolidayTfilot,
+                ...packagedHolidayTfilot,
+              ].map((tefila) => [
+                getTefilaId(tefila),
+                tefila,
+              ]),
+            ).values(),
+          )
+
+        return combined.length > 0
+          ? {
+              ...group,
+              tfilot: combined,
+            }
           : null
       })
       .filter(
@@ -315,15 +354,26 @@ function TefilaManagerPage({
             group.dateValue,
           )
 
-        // Lördag ska aldrig ligga här
+        const remainingTfilot =
+          group.tfilot.filter(
+            (tefila) =>
+              tefila.kind !== 'erevHoliday' &&
+              tefila.kind !== 'holiday',
+          )
+
+        if (
+          remainingTfilot.length === 0
+        ) {
+          return null
+        }
+
         if (weekday === 6) {
           return null
         }
 
-        // Fredag: allt utom Kabbalat Shabbat
         if (weekday === 5) {
           const weekdayTfilot =
-            group.tfilot.filter(
+            remainingTfilot.filter(
               (tefila) =>
                 !isKabbalatShabbat(
                   tefila,
@@ -333,12 +383,12 @@ function TefilaManagerPage({
           return weekdayTfilot.length > 0
             ? {
                 ...group,
-                tfilot: weekdayTfilot,
+                tfilot:
+                  weekdayTfilot,
               }
             : null
         }
 
-        // Övriga riktiga helgdagar
         const isActualHoliday =
           hebcal.holidayNames.length > 0 &&
           !hebcal.isErevHoliday
@@ -347,7 +397,11 @@ function TefilaManagerPage({
           return null
         }
 
-        return group
+        return {
+          ...group,
+          tfilot:
+            remainingTfilot,
+        }
       })
       .filter(
         (
@@ -360,6 +414,60 @@ function TefilaManagerPage({
     tab === 'shabbat'
       ? shabbatGroups
       : weekdayGroups
+
+  function isManualTefila(
+    tefila: Tefila,
+  ): boolean {
+    const tefilaId =
+      getTefilaId(tefila)
+
+    return !upcomingTfilot.some(
+      (standardTefila) =>
+        getTefilaId(
+          standardTefila,
+        ) === tefilaId,
+    )
+  }
+
+  async function removeTefila(
+    tefila: Tefila,
+  ) {
+    if (!isManualTefila(tefila)) {
+      return
+    }
+
+    const tefilaId =
+      getTefilaId(tefila)
+
+    const confirmed =
+      window.confirm(
+        `Ta bort "${tefila.title}" ${tefila.day} ${tefila.date} permanent?`,
+      )
+
+    if (!confirmed) {
+      return
+    }
+
+    setDeletingId(tefilaId)
+    setError('')
+
+    try {
+      await deleteTefila(
+        tefilaId,
+      )
+    } catch (caughtError) {
+      console.error(
+        'Kunde inte ta bort tfilan:',
+        caughtError,
+      )
+
+      setError(
+        'Tfilan kunde inte tas bort.',
+      )
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   function startEditing(
     tefila: Tefila,
@@ -704,6 +812,29 @@ function TefilaManagerPage({
                         <Pencil className="h-4 w-4" />
                         Ändra tid för denna tfilah
                       </button>
+
+                        {isManualTefila(tefila) && (
+                          <button
+                            type="button"
+                            disabled={
+                              deletingId ===
+                              tefilaId
+                            }
+                            onClick={() => {
+                              void removeTefila(
+                                tefila,
+                              )
+                            }}
+                            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800 ring-1 ring-rose-100 disabled:opacity-60"
+                          >
+                            <Trash2 className="h-4 w-4" />
+
+                            {deletingId ===
+                            tefilaId
+                              ? 'Tar bort…'
+                              : 'Ta bort tfilah'}
+                          </button>
+                        )}
                       </>
                     )}
                   </div>

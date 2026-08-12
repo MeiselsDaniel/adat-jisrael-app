@@ -37,6 +37,10 @@ type MinyanCardProps = {
     label: string
     value: string
   }
+  holidayLabel?: string
+  sermon?: string
+  comment?: string
+  moreInformation?: string
   onRegister: (
     guestCount: number,
     guestComment?: string,
@@ -65,6 +69,10 @@ function MinyanCard({
   actualAttendance,
   canManage = false,
   extraInfo,
+  holidayLabel,
+  sermon,
+  comment,
+  moreInformation,
   onRegister,
   onUnregister,
   onCancel,
@@ -107,6 +115,9 @@ function MinyanCard({
     setDraftActualAttendance(attendance)
   }, [attendance])
 
+  const registrationEnabled =
+    tefila.allowRegistration !== false
+
   const attendanceColor =
     attendance >= 10
       ? 'bg-emerald-100 text-emerald-900'
@@ -118,6 +129,18 @@ function MinyanCard({
     tefila.title
       .toLowerCase()
       .includes('kabbalat shabbat')
+
+  const isHolidayPackaged =
+    tefila.kind === 'erevHoliday' ||
+    tefila.kind === 'holiday'
+
+  const topLabel =
+    isHolidayPackaged
+      ? holidayLabel ??
+        (tefila.kind === 'erevHoliday'
+          ? 'Erev högtid'
+          : 'Högtid')
+      : null
 
   function openGuestForm() {
     setDraftGuestCount(
@@ -255,6 +278,24 @@ function MinyanCard({
             {tefila.time}
           </p>
 
+              {sermon && (
+                <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+                  Predikan: {sermon}
+                </p>
+              )}
+
+              {comment && (
+                <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
+                  {comment}
+                </p>
+              )}
+
+              {moreInformation && (
+                <p className="mt-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700 ring-1 ring-slate-200">
+                  {moreInformation}
+                </p>
+              )}
+
           <p className="mt-5 rounded-2xl bg-white/70 px-4 py-3 text-sm font-semibold text-rose-900">
             Denna tfilah har ställts in.
           </p>
@@ -286,11 +327,19 @@ function MinyanCard({
   return (
     <article
       className={`overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ${
-        isKabbalatShabbat
-          ? 'ring-[#68123f]/25'
-          : 'ring-slate-200'
+        isHolidayPackaged
+          ? 'ring-amber-700/25'
+          : isKabbalatShabbat
+            ? 'ring-[#68123f]/25'
+            : 'ring-slate-200'
       }`}
     >
+      {topLabel && (
+        <div className="bg-amber-700 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white">
+          {topLabel}
+        </div>
+      )}
+
       {isKabbalatShabbat && (
         <div className="bg-[#68123f] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white">
           Erev Shabbat
@@ -344,9 +393,27 @@ function MinyanCard({
               {tefila.time}
             </p>
 
+              {sermon && (
+                <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+                  Predikan: {sermon}
+                </p>
+              )}
+
+              {comment && (
+                <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
+                  {comment}
+                </p>
+              )}
+
+              {moreInformation && (
+                <p className="mt-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700 ring-1 ring-slate-200">
+                  {moreInformation}
+                </p>
+              )}
+
           </div>
 
-          <div>
+          <div className={registrationEnabled ? '' : 'hidden'}>
             <div
               className={`min-w-24 rounded-2xl px-3 py-3 text-center ${attendanceColor}`}
             >
@@ -393,7 +460,7 @@ function MinyanCard({
         </div>
       )}
 
-      {canRegister && (
+      {registrationEnabled && canRegister && (
         <div className="px-4 pb-4">
           <div className="grid grid-cols-2 gap-2">
           <button
@@ -455,7 +522,7 @@ function MinyanCard({
       )}
 
 
-      {detailsOpen && (
+      {detailsOpen && registrationEnabled && (
         <div className="border-t border-slate-100 bg-slate-50 px-4 py-4">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-[#183b70]" />

@@ -11,6 +11,13 @@ import {
   type TefilaRecord,
 } from '../services/tefilaService'
 import type { Tefila } from '../types'
+import { getHebcalDayInfo } from '../services/hebcalService'
+import {
+  getDisplayedCandleLightingTime,
+  getDisplayedHavdalaTime,
+  subscribeToDaySettings,
+  type DaySettings,
+} from '../services/daySettingsService'
 import { sendMinyanNeedPush } from '../services/adminPushService'
 
 type LiveMinyanCardProps = {
@@ -20,12 +27,14 @@ type LiveMinyanCardProps = {
     label: string
     value: string
   }
+  holidayLabel?: string
 }
 
 function LiveMinyanCard({
   tefila,
   showAdminControls = false,
   extraInfo,
+  holidayLabel,
 }: LiveMinyanCardProps) {
   const { firebaseUser, profile } = useAuth()
 
@@ -35,6 +44,9 @@ function LiveMinyanCard({
 
   const [record, setRecord] =
     useState<TefilaRecord | null>(null)
+
+  const [daySettings, setDaySettings] =
+    useState<DaySettings | null>(null)
 
   const [
     sendingMinyanPush,
@@ -54,6 +66,19 @@ function LiveMinyanCard({
 
     return unsubscribe
   }, [tefilaId])
+
+
+  useEffect(() => {
+    if (!tefila.dateValue) {
+      setDaySettings(null)
+      return
+    }
+
+    return subscribeToDaySettings(
+      tefila.dateValue,
+      setDaySettings,
+    )
+  }, [tefila.dateValue])
 
   /*
    * Standardschemat används som grund.
@@ -87,9 +112,90 @@ function LiveMinyanCard({
     showAdminControls &&
     profile?.role === 'admin'
 
+  const isHolidayWithoutRegistration =
+    daySettings?.dayType === 'holiday' ||
+    daySettings?.dayType === 'shabbatHoliday'
+
+  const registrationAllowed =
+    !isHolidayWithoutRegistration &&
+    displayedTefila.allowRegistration !== false &&
+    record?.allowRegistration !== false
+
   const canRegisterForMinyan =
-    profile?.role === 'admin' ||
-    profile?.countsForMinyan === true
+    registrationAllowed &&
+    (
+      profile?.role === 'admin' ||
+      profile?.countsForMinyan === true
+    )
+
+  const hebcalInfo =
+    tefila.dateValue
+      ? getHebcalDayInfo(
+          tefila.dateValue,
+        )
+      : null
+
+  const candleLightingTime =
+    getDisplayedCandleLightingTime(
+      hebcalInfo?.candleLightingTime ??
+        null,
+      daySettings,
+    )
+
+  const havdalaTime =
+    getDisplayedHavdalaTime(
+      hebcalInfo?.havdalaTime ??
+        null,
+      daySettings,
+    )
+
+  const dayIsHoliday =
+    daySettings?.dayType === 'holiday' ||
+    daySettings?.dayType === 'shabbatHoliday'
+
+  const effectiveHolidayKind =
+    tefila.kind === 'erevHoliday'
+      ? 'erevHoliday'
+      : tefila.kind === 'holiday' ||
+          dayIsHoliday
+        ? 'holiday'
+        : tefila.kind
+
+  const rawHolidayName =
+    daySettings?.holidayName?.trim() ||
+    hebcalInfo?.holidayNames?.[0] ||
+    ''
+
+  const calculatedHolidayLabel =
+    effectiveHolidayKind === 'erevHoliday'
+      ? rawHolidayName
+          .toLowerCase()
+          .startsWith('erev ')
+        ? rawHolidayName
+        : rawHolidayName
+          ? `Erev ${rawHolidayName}`
+          : 'Erev högtid'
+      : effectiveHolidayKind === 'holiday'
+        ? rawHolidayName || 'Högtid'
+        : undefined
+
+  const holidayExtraInfo =
+    effectiveHolidayKind === 'erevHoliday' &&
+    candleLightingTime
+      ? {
+          label: 'Ljuständning',
+          value: candleLightingTime,
+        }
+      : effectiveHolidayKind === 'holiday' &&
+          havdalaTime
+        ? {
+            label: 'Havdala',
+            value: havdalaTime,
+          }
+        : undefined
+
+  const displayedExtraInfo =
+    extraInfo ?? holidayExtraInfo
 
   async function ensureRecord() {
     await ensureTefilaExists({
@@ -193,7 +299,12 @@ function LiveMinyanCard({
   return (
     <>
       <MinyanCard
-      tefila={displayedTefila}
+      tefila={{
+        ...displayedTefila,
+        kind: effectiveHolidayKind,
+        allowRegistration:
+          registrationAllowed,
+      }}
       registered={registered}
       attendance={attendance}
       registrations={registrations}
@@ -216,7 +327,25 @@ function LiveMinyanCard({
       }
       canManage={canManage}
       canRegister={canRegisterForMinyan}
-      extraInfo={extraInfo}
+      extraInfo={displayedExtraInfo}
+      holidayLabel={
+        holidayLabel ??
+        calculatedHolidayLabel
+      }
+      sermon={
+        tefila.title
+          .toLowerCase()
+          .includes('shacharit') ||
+        tefila.kind === 'erevHoliday'
+          ? daySettings?.sermon
+          : undefined
+      }
+      comment={
+        daySettings?.comment
+      }
+      moreInformation={
+        daySettings?.moreInformation
+      }
       onRegister={register}
       onUnregister={unregister}
       onCancel={cancelTefila}
@@ -225,6 +354,7 @@ function LiveMinyanCard({
     />
 
       {canManage &&
+        registrationAllowed &&
         record?.status !== 'cancelled' &&
         peopleNeeded > 0 && (
           <div className="mt-2 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-100">

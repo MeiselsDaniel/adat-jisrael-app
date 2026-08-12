@@ -14,6 +14,19 @@ import {
   type DayType,
 } from '../services/daySettingsService'
 
+function ensureErevHolidayName(
+  name: string,
+): string {
+  const trimmed = name.trim()
+
+  return trimmed
+    .toLowerCase()
+    .startsWith('erev ')
+    ? trimmed
+    : `Erev ${trimmed}`
+}
+
+
 type DaySettingsEditorProps = {
   dateValue: string
 }
@@ -218,7 +231,7 @@ function DaySettingsEditor({
 
       case 'erevShabbatErevHoliday':
         return previewHolidayName
-          ? `Erev ${previewHolidayName} · Erev Shabbat`
+          ? `${ensureErevHolidayName(previewHolidayName)} · Erev Shabbat`
           : 'Erev Shabbat'
 
       case 'holiday':

@@ -10,7 +10,6 @@ import {
   Megaphone,
   Plus,
   RefreshCw,
-  Settings,
   Shield,
   ShieldCheck,
   UserCheck,
@@ -987,13 +986,6 @@ useEffect(() => {
             </div>
           )}
 
-          <AdminMenuItem
-            icon={
-              <Settings className="h-6 w-6" />
-            }
-            title="Inställningar"
-            description="Standardschema och appinställningar"
-          />
         </div>
       </section>
 

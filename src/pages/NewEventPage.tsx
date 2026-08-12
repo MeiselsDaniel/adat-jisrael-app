@@ -5,6 +5,7 @@ import {
 } from '../services/newsService'
 import {
   saveTefila,
+  type TefilaKind,
   type TefilaRecord,
 } from '../services/tefilaService'
 import type { FormEvent } from 'react'
@@ -83,6 +84,9 @@ function NewEventPage({
     useState<EventType>(
       initialEvent?.type ?? 'tefila',
     )
+
+  const [tefilaKind, setTefilaKind] =
+    useState<TefilaKind>('regular')
 
   const [title, setTitle] = useState(
     initialEvent?.title ?? 'Shacharit',
@@ -199,6 +203,7 @@ function NewEventPage({
     setSaved(false)
 
     if (nextType === 'tefila') {
+      setTefilaKind('regular')
       setTitle('Shacharit')
       setAllowRegistration(true)
       setShowOnHome(true)
@@ -433,6 +438,10 @@ function NewEventPage({
           status: 'scheduled',
           allowRegistration:
             newEvent.allowRegistration,
+          kind:
+            eventType === 'tefila'
+              ? tefilaKind
+              : 'regular',
         }
 
         await saveTefila(tefilaRecord)
@@ -551,6 +560,35 @@ function NewEventPage({
               )}
             </select>
           </Field>
+
+          {eventType === 'tefila' && (
+            <Field label="Paketering av tfilah">
+              <select
+                value={tefilaKind}
+                onChange={(event) =>
+                  setTefilaKind(
+                    event.target.value as TefilaKind,
+                  )
+                }
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+              >
+                <option value="regular">
+                  Vanlig
+                </option>
+                <option value="erevHoliday">
+                  Erev högtid
+                </option>
+                <option value="holiday">
+                  Högtid
+                </option>
+              </select>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Styr bara hur tfilan visas och sorteras.
+                Titel och anmälan väljer du separat.
+              </p>
+            </Field>
+          )}
 
           <Field label="Titel">
             <input

@@ -15,6 +15,19 @@ import {
   type DaySettings,
 } from '../services/daySettingsService'
 
+function ensureErevHolidayName(
+  name: string,
+): string {
+  const trimmed = name.trim()
+
+  return trimmed
+    .toLowerCase()
+    .startsWith('erev ')
+    ? trimmed
+    : `Erev ${trimmed}`
+}
+
+
 type ErevDayInfoCardProps = {
   dateValue: string
 }
@@ -122,11 +135,11 @@ function ErevDayInfoCard({
     isErevHoliday
   ) {
     title = holidayName
-      ? `Erev Shabbat · Erev ${holidayName}`
+      ? `Erev Shabbat · ${ensureErevHolidayName(holidayName)}`
       : 'Erev Shabbat · Erev högtid'
   } else if (isErevHoliday) {
     title = holidayName
-      ? `Erev ${holidayName}`
+      ? ensureErevHolidayName(holidayName)
       : 'Erev högtid'
   } else if (isErevShabbat) {
     title = 'Erev Shabbat'

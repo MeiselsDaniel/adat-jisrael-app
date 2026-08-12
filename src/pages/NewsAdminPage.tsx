@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import {
+  saveFundraiser,
   subscribeToFundraiser,
   type Fundraiser,
 } from '../services/fundraiserService'
@@ -241,6 +242,42 @@ const [status, setStatus] =
       return
     }
 
+    const fundraiserGoalValue =
+      Number(fundraiserGoal)
+
+    const fundraiserCurrentValue =
+      Number(fundraiserCurrent)
+
+    if (
+      category === 'fundraiser' &&
+      (
+        !Number.isFinite(
+          fundraiserGoalValue,
+        ) ||
+        fundraiserGoalValue <= 0
+      )
+    ) {
+      setError(
+        'Ange ett giltigt målbelopp.',
+      )
+      return
+    }
+
+    if (
+      category === 'fundraiser' &&
+      (
+        !Number.isFinite(
+          fundraiserCurrentValue,
+        ) ||
+        fundraiserCurrentValue < 0
+      )
+    ) {
+      setError(
+        'Ange ett giltigt insamlat belopp.',
+      )
+      return
+    }
+
     setSaving(true)
     setSaved(false)
     setError('')
@@ -285,6 +322,20 @@ const [status, setStatus] =
       }
 
       newsWasSaved = true
+
+      if (category === 'fundraiser') {
+        await saveFundraiser({
+          title: title.trim(),
+          description:
+            excerpt.trim(),
+          goalAmount:
+            fundraiserGoalValue,
+          currentAmount:
+            fundraiserCurrentValue,
+          active:
+            fundraiserActive,
+        })
+      }
 
       if (
         status === 'published' &&

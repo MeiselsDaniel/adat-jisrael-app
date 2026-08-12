@@ -764,11 +764,43 @@ function ErevShabbatCard({
         }
       : undefined
 
+    const isErevShabbatErevHoliday =
+      daySettings?.dayType ===
+      'erevShabbatErevHoliday'
+
+    const rawErevHolidayName =
+      daySettings?.holidayName?.trim() ||
+      cardFridayHebcalInfo.holidayNames[0] ||
+      ''
+
+    const erevHolidayName =
+      rawErevHolidayName
+        .toLowerCase()
+        .startsWith('erev ')
+        ? rawErevHolidayName
+        : rawErevHolidayName
+          ? `Erev ${rawErevHolidayName}`
+          : ''
+
+    const fridayHolidayLabel =
+      isErevShabbatErevHoliday &&
+      erevHolidayName
+        ? `Erev Shabbat · ${erevHolidayName}`
+        : undefined
+
   return (
-    <LiveMinyanCard
-      tefila={tefila}
-      extraInfo={candleLightingInfo}
-    />
+      <LiveMinyanCard
+        tefila={
+          isErevShabbatErevHoliday
+            ? {
+                ...tefila,
+                kind: 'erevHoliday',
+              }
+            : tefila
+        }
+        extraInfo={candleLightingInfo}
+        holidayLabel={fridayHolidayLabel}
+      />
   )
 }
 
@@ -832,29 +864,53 @@ function ProgramCard({
     )
   }, [cardSaturdayDateValue])
 
-  const isHoliday =
+    const specialShabbatNames = [
+      'Shabbat Shuva',
+      'Shabbat Shekalim',
+      'Shabbat Zachor',
+      'Shabbat Parah',
+      'Shabbat HaChodesh',
+      'Shabbat HaGadol',
+      'Shabbat Chazon',
+      'Shabbat Nachamu',
+    ]
+
+    const specialShabbatNotices =
+      shabbatHebcalInfo.holidayNames.filter(
+        (name) =>
+          specialShabbatNames.includes(name),
+      )
+
+    const actualHolidayNames =
+      shabbatHebcalInfo.holidayNames.filter(
+        (name) =>
+          !specialShabbatNames.includes(name),
+      )
+
+    const isHoliday =
       daySettings?.dayType === 'holiday' ||
       daySettings?.dayType === 'shabbatHoliday' ||
       daySettings?.dayType === 'erevShabbatHoliday' ||
       daySettings?.dayType ===
         'erevShabbatErevHoliday' ||
-      shabbatHebcalInfo.isHoliday
+      actualHolidayNames.length > 0
 
-  const customHolidayName =
-    daySettings?.holidayName?.trim()
+    const customHolidayName =
+      daySettings?.holidayName?.trim()
 
-  const baseDisplayTitle =
-    customHolidayName ||
-    shabbatHebcalInfo.holidayNames[0] ||
-    shabbatHebcalInfo.parasha ||
-    todayProgram.title
+    const baseDisplayTitle =
+      customHolidayName ||
+      actualHolidayNames[0] ||
+      shabbatHebcalInfo.parasha ||
+      todayProgram.title
 
-  const shabbatNotices = [
-    shabbatHebcalInfo.isShabbatMevarchim
-      ? 'Shabbat Mevarchim'
-      : null,
-    shabbatHebcalInfo.roshChodeshName,
-  ].filter(Boolean)
+    const shabbatNotices = [
+      ...specialShabbatNotices,
+      shabbatHebcalInfo.isShabbatMevarchim
+        ? 'Shabbat Mevarchim'
+        : null,
+      shabbatHebcalInfo.roshChodeshName,
+    ].filter(Boolean)
 
   const displayTitle =
     [

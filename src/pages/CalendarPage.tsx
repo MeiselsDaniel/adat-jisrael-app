@@ -642,6 +642,17 @@ function buildCalendarItems({
        * Notiser som Leil Selichot ska inte
        * ersätta parashan.
        */
+      const specialShabbatNames = [
+        'Shabbat Shuva',
+        'Shabbat Shekalim',
+        'Shabbat Zachor',
+        'Shabbat Parah',
+        'Shabbat HaChodesh',
+        'Shabbat HaGadol',
+        'Shabbat Chazon',
+        'Shabbat Nachamu',
+      ]
+
       const significantHoliday =
         hebcal.holidayNames.find(
           (name) =>
@@ -650,7 +661,8 @@ function buildCalendarItems({
               .includes('selichot') &&
             !name
               .toLowerCase()
-              .includes('slichot'),
+              .includes('slichot') &&
+            !specialShabbatNames.includes(name),
         )
 
       const shabbatTitle =

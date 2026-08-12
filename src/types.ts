@@ -216,6 +216,9 @@ export type Tefila = {
    * från Firestore-registreringarna.
    */
   attending?: number
+  kind?: 'regular' | 'erevHoliday' | 'holiday'
+
+  allowRegistration?: boolean
 }
 
 export type CalendarEvent = {

@@ -24,6 +24,7 @@ import {
   type Fundraiser,
 } from '../services/fundraiserService'
 
+import { synagogueSettings } from '../data/settings'
 type InformationPageProps = {
   user: AppUser
 }
@@ -378,6 +379,47 @@ return (
               <p className="mt-2 text-right text-xs font-bold text-[#183b70]">
                 {fundraiserPercent}% av målet
               </p>
+
+                <div className="mt-4 border-t border-sky-200 pt-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#183b70]">
+                    Stöd insamlingen med Swish
+                  </p>
+
+                  <p className="mt-2 text-xl font-black tracking-wide text-[#183b70]">
+                    {synagogueSettings.swish.number}
+                  </p>
+
+                  <p className="mt-1 text-sm text-slate-600">
+                    Meddelande:{' '}
+                    <strong>
+                      {fundraiser.title ||
+                        synagogueSettings.swish.message}
+                    </strong>
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(
+                          synagogueSettings.swish.number,
+                        )
+                        .then(() => {
+                          window.alert(
+                            `Swishnummer ${synagogueSettings.swish.number} har kopierats.`,
+                          )
+                        })
+                        .catch(() => {
+                          window.alert(
+                            `Swish: ${synagogueSettings.swish.number}`,
+                          )
+                        })
+                    }}
+                    className="mt-3 w-full rounded-2xl bg-[#183b70] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#102d57]"
+                  >
+                    Kopiera Swish-nummer
+                  </button>
+                </div>
             </div>
           )}
 
