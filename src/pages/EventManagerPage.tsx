@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft,
   CalendarDays,
+  ChevronDown,
+  ChevronUp,
   CheckCircle2,
   ChevronRight,
   Clock,
@@ -12,6 +14,7 @@ import {
   RotateCcw,
   Search,
   Trash2,
+  Users,
   TriangleAlert,
   XCircle,
 } from 'lucide-react'
@@ -22,6 +25,13 @@ import {
   subscribeToAllEvents,
   type StoredAppEvent,
 } from '../services/eventService'
+
+import {
+  countEventParticipants,
+  subscribeToEventRegistrations,
+  updateEventRegistrationPaid,
+  type StoredEventRegistration,
+} from '../services/eventRegistrationService'
 import type {
   EventStatus,
   EventType,
@@ -332,6 +342,89 @@ function EventAdminCard({
   const isCancelled =
     event.status === 'cancelled'
 
+  const [
+    registrationsOpen,
+    setRegistrationsOpen,
+  ] = useState(false)
+
+  const [
+    registrations,
+    setRegistrations,
+  ] = useState<StoredEventRegistration[]>([])
+
+  const [
+    registrationsLoading,
+    setRegistrationsLoading,
+  ] = useState(false)
+
+  const [
+    savingPaidId,
+    setSavingPaidId,
+  ] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!registrationsOpen) {
+      return
+    }
+
+    setRegistrationsLoading(true)
+
+    const unsubscribe =
+      subscribeToEventRegistrations(
+        event.id,
+        (items) => {
+          setRegistrations(items)
+          setRegistrationsLoading(false)
+        },
+        () => {
+          setRegistrationsLoading(false)
+        },
+      )
+
+    return unsubscribe
+  }, [
+    event.id,
+    registrationsOpen,
+  ])
+
+  const participantCount =
+    countEventParticipants(
+      registrations,
+    )
+
+  const paidRegistrationCount =
+    registrations.filter(
+      (registration) =>
+        registration.paid === true,
+    ).length
+
+  async function handlePaidChange(
+    registration: StoredEventRegistration,
+    paid: boolean,
+  ) {
+    setSavingPaidId(
+      registration.id,
+    )
+
+    try {
+      await updateEventRegistrationPaid(
+        registration.id,
+        paid,
+      )
+    } catch (error) {
+      console.error(
+        'Kunde inte uppdatera betalstatus:',
+        error,
+      )
+
+      window.alert(
+        'Betalstatus kunde inte sparas.',
+      )
+    } finally {
+      setSavingPaidId(null)
+    }
+  }
+
   return (
     <article
       className={`overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ${
@@ -401,6 +494,183 @@ function EventAdminCard({
               </p>
             )}
           </div>
+        </div>
+
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() =>
+              setRegistrationsOpen(
+                (current) => !current,
+              )
+            }
+            className="flex w-full items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-left ring-1 ring-slate-200"
+          >
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-[#183b70]" />
+
+              <div>
+                <p className="text-sm font-bold text-slate-800">
+                  Anmälda
+                  {registrationsOpen &&
+                    !registrationsLoading &&
+                    ` · ${participantCount} ${
+                      participantCount === 1
+                        ? 'person'
+                        : 'personer'
+                    }`}
+                </p>
+
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Visa anmälningslistan
+                </p>
+              </div>
+            </div>
+
+            {registrationsOpen ? (
+              <ChevronUp className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            )}
+          </button>
+
+          {registrationsOpen && (
+            <div className="mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              {registrationsLoading ? (
+                <div className="flex items-center justify-center gap-2 px-4 py-5 text-sm font-semibold text-slate-500">
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Hämtar anmälningar…
+                </div>
+              ) : registrations.length === 0 ? (
+                <div className="px-4 py-5 text-center">
+                  <p className="text-sm font-bold text-slate-700">
+                    Ingen är anmäld ännu
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+                    <p className="text-sm font-black text-[#183b70]">
+                      {participantCount}{' '}
+                      {participantCount === 1
+                        ? 'person anmäld'
+                        : 'personer anmälda'}
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {registrations.length}{' '}
+                      {registrations.length === 1
+                        ? 'anmälan'
+                        : 'anmälningar'}
+                      {' · '}
+                      {paidRegistrationCount} av{' '}
+                      {registrations.length}{' '}
+                      betalda
+                    </p>
+                  </div>
+
+                  <div className="divide-y divide-slate-100">
+                    {registrations.map(
+                      (registration) => {
+                        const names =
+                          registration.participantNames
+                            ?.filter(Boolean) ?? []
+
+                        return (
+                          <div
+                            key={registration.id}
+                            className="px-4 py-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-800">
+                                  {registration.userName ||
+                                    'Namnlös anmälan'}
+                                </p>
+
+                                {names.length > 0 && (
+                                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                                    {names.join(', ')}
+                                  </p>
+                                )}
+
+                                {(registration.memberCount !==
+                                  undefined ||
+                                  registration.nonMemberCount !==
+                                    undefined) && (
+                                  <p className="mt-1 text-xs text-slate-400">
+                                    {registration.memberCount ??
+                                      0}{' '}
+                                    medlem
+                                    {(registration.memberCount ??
+                                      0) === 1
+                                      ? ''
+                                      : 'mar'}
+                                    {' · '}
+                                    {registration.nonMemberCount ??
+                                      0}{' '}
+                                    {(
+                                      registration.nonMemberCount ??
+                                      0
+                                    ) === 1
+                                      ? 'icke-medlem'
+                                      : 'icke-medlemmar'}
+                                  </p>
+                                )}
+                              </div>
+
+                              <span className="shrink-0 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-black text-[#183b70]">
+                                {registration.partySize}{' '}
+                                {registration.partySize === 1
+                                  ? 'person'
+                                  : 'personer'}
+                              </span>
+                            </div>
+
+                            <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  registration.paid ===
+                                  true
+                                }
+                                disabled={
+                                  savingPaidId ===
+                                  registration.id
+                                }
+                                onChange={(event) => {
+                                  void handlePaidChange(
+                                    registration,
+                                    event.target.checked,
+                                  )
+                                }}
+                                className="h-4 w-4 accent-emerald-600"
+                              />
+
+                              <span
+                                className={`text-xs font-bold ${
+                                  registration.paid
+                                    ? 'text-emerald-700'
+                                    : 'text-slate-500'
+                                }`}
+                              >
+                                {savingPaidId ===
+                                registration.id
+                                  ? 'Sparar…'
+                                  : registration.paid
+                                    ? 'Betald'
+                                    : 'Ej betald'}
+                              </span>
+                            </label>
+                          </div>
+                        )
+                      },
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2">

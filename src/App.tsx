@@ -222,7 +222,7 @@ function App() {
     return (
       <div className="min-h-screen bg-slate-100 text-slate-900">
         {pushBanner}
-        <div className="mx-auto min-h-screen w-full max-w-md bg-[#f8fafc] px-4 pb-28 pt-5 shadow-xl">
+        <div className="mx-auto min-h-screen w-full max-w-md bg-[#f8fafc] px-4 pt-5 shadow-xl [padding-bottom:calc(11rem+env(safe-area-inset-bottom))]">
           {adminView === 'dashboard' && (
             <AdminPage
               onBack={closeAdmin}

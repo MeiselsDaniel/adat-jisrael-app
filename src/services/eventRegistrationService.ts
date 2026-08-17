@@ -6,6 +6,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
   type Unsubscribe,
 } from 'firebase/firestore'
@@ -20,6 +21,7 @@ export type StoredEventRegistration = {
   memberCount?: number
   nonMemberCount?: number
   participantNames?: string[]
+  paid?: boolean
   registeredAt?: unknown
   updatedAt?: unknown
 }
@@ -86,6 +88,23 @@ export async function saveEventRegistration(
     },
     {
       merge: true,
+    },
+  )
+}
+
+export async function updateEventRegistrationPaid(
+  registrationId: string,
+  paid: boolean,
+): Promise<void> {
+  await updateDoc(
+    doc(
+      db,
+      'eventRegistrations',
+      registrationId,
+    ),
+    {
+      paid,
+      updatedAt: serverTimestamp(),
     },
   )
 }
