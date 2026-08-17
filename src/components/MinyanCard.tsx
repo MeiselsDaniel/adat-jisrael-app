@@ -444,19 +444,43 @@ function MinyanCard({
       </button>
 
       {completed && (
-        <div className="mx-4 mb-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
-          <p className="font-bold">
-            Minjan bekräftad i efterhand
-          </p>
+        <div
+          className={`mx-4 mb-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ${
+            minyanResult === 'confirmed'
+              ? 'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200'
+              : 'bg-rose-50 text-rose-900 ring-1 ring-rose-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                minyanResult === 'confirmed'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-rose-600 text-white'
+              }`}
+            >
+              {minyanResult === 'confirmed' ? (
+                <Check className="h-5 w-5" />
+              ) : (
+                <X className="h-5 w-5" />
+              )}
+            </div>
 
-          <p className="mt-1">
-            {minyanResult === 'confirmed'
-              ? 'Det blev minjan.'
-              : 'Det blev inte minjan.'}
-            {actualAttendance !== undefined
-              ? ` Faktiskt antal: ${actualAttendance}.`
-              : ''}
-          </p>
+            <span className="font-bold">
+              {minyanResult === 'confirmed'
+                ? 'Minjan'
+                : 'Ingen minjan'}
+            </span>
+          </div>
+
+          {actualAttendance !== undefined && (
+            <span className="text-sm font-bold">
+              {actualAttendance}{' '}
+              {actualAttendance === 1
+                ? 'person'
+                : 'personer'}
+            </span>
+          )}
         </div>
       )}
 

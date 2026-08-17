@@ -119,7 +119,6 @@ function BoardContactPage({
         </div>
       </section>
 
-
       <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-100 text-[#183b70]">

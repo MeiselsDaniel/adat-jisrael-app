@@ -20,10 +20,13 @@ import MembershipPage from './pages/MembershipPage'
 import MorePage from './pages/MorePage'
 import ProfilePage from './pages/ProfilePage'
 import BoardContactPage from './pages/BoardContactPage'
+import DocumentsPage from './pages/DocumentsPage'
 import NewEventPage from './pages/NewEventPage'
 import NewsAdminPage from './pages/NewsAdminPage'
+import DocumentManagerPage from './pages/DocumentManagerPage'
 import PendingApprovalPage from './pages/PendingApprovalPage'
 import TefilaManagerPage from './pages/TefilaManagerPage'
+import MinyanStatisticsPage from './pages/MinyanStatisticsPage'
 import type {
   AppEvent,
   AppUser,
@@ -41,9 +44,11 @@ import {
 type AdminView =
   | 'dashboard'
   | 'tfilot'
+  | 'minyanStatistics'
   | 'events'
   | 'kiddush'
   | 'news'
+  | 'documents'
   | 'newEvent'
 
 function App() {
@@ -228,6 +233,9 @@ function App() {
               onOpenTfilot={() =>
                 setAdminView('tfilot')
               }
+              onOpenMinyanStatistics={() =>
+                setAdminView('minyanStatistics')
+              }
               onOpenEvents={() =>
                 setAdminView('events')
               }
@@ -237,11 +245,22 @@ function App() {
               onOpenNews={() =>
                 setAdminView('news')
               }
+              onOpenDocuments={() =>
+                setAdminView('documents')
+              }
             />
           )}
 
           {adminView === 'tfilot' && (
             <TefilaManagerPage
+              onBack={() =>
+                setAdminView('dashboard')
+              }
+            />
+          )}
+
+          {adminView === 'minyanStatistics' && (
+            <MinyanStatisticsPage
               onBack={() =>
                 setAdminView('dashboard')
               }
@@ -274,6 +293,14 @@ function App() {
 
           {adminView === 'news' && (
             <NewsAdminPage
+              onBack={() =>
+                setAdminView('dashboard')
+              }
+            />
+          )}
+
+          {adminView === 'documents' && (
+            <DocumentManagerPage
               onBack={() =>
                 setAdminView('dashboard')
               }
@@ -361,6 +388,9 @@ function App() {
               openBoardContact={() =>
                 setPage('boardContact')
               }
+              openDocuments={() =>
+                setPage('documents')
+              }
               openProfile={() =>
                 setPage('profile')
               }
@@ -374,6 +404,16 @@ function App() {
               }
             />
           )}
+
+          {page === 'documents' &&
+            (currentUser.category === 'member' ||
+            currentUser.category === 'board') && (
+              <DocumentsPage
+                onBack={() =>
+                  setPage('more')
+                }
+              />
+            )}
 
 
           {page === 'profile' && (

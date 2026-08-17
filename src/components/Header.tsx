@@ -13,6 +13,7 @@ const pageTitles: Record<Page, string> = {
   kiddush: 'Kiddush',
   membership: 'Medlemskap',
   boardContact: 'Styrelse & kontakt',
+  documents: 'Dokument',
   profile: 'Min profil',
   more: 'Mer',
 }

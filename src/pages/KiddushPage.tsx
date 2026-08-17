@@ -332,6 +332,26 @@ function KiddushPage() {
 
             <div>
               <h3 className="font-bold text-slate-900">
+                Bar/Bat Mitzva
+              </h3>
+
+              <p className="mt-1">
+                Planerar ni en Bar eller Bat Mitzva?{' '}
+                <strong>Mazel tov!</strong> Kom ihåg att
+                samordna datum och planering med rabbin Amster
+                och gabbaim. Kontakta{' '}
+                <a
+                  href="mailto:info@adatjisrael.se"
+                  className="font-bold text-[#183b70]"
+                >
+                  info@adatjisrael.se
+                </a>
+                .
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-slate-900">
                 Fotografering
               </h3>
 

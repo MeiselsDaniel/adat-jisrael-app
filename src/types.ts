@@ -5,6 +5,7 @@ export type Page =
   | 'kiddush'
   | 'membership'
   | 'boardContact'
+  | 'documents'
   | 'profile'
   | 'more'
 

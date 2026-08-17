@@ -1,6 +1,7 @@
 import {
   ChevronRight,
   CircleHelp,
+  FileText,
   LogOut,
   Mail,
   ShieldCheck,
@@ -14,6 +15,7 @@ type MorePageProps = {
   onLogout: () => void
   openAdmin: () => void
   openBoardContact: () => void
+  openDocuments: () => void
   openProfile: () => void
 }
 
@@ -22,6 +24,7 @@ function MorePage({
   onLogout,
   openAdmin,
   openBoardContact,
+  openDocuments,
   openProfile,
 }: MorePageProps) {
   return (
@@ -78,6 +81,15 @@ function MorePage({
           label="Styrelse & kontakt"
           onClick={openBoardContact}
         />
+
+        {(user.category === 'member' ||
+          user.category === 'board') && (
+          <MenuItem
+            icon={<FileText className="h-5 w-5" />}
+            label="Dokument"
+            onClick={openDocuments}
+          />
+        )}
       </section>
 
       <button

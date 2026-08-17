@@ -49,9 +49,11 @@ type AdminPageProps = {
   onBack: () => void
   onCreateEvent: () => void
   onOpenTfilot: () => void
+  onOpenMinyanStatistics: () => void
   onOpenEvents: () => void
   onOpenKiddush: () => void
   onOpenNews: () => void
+  onOpenDocuments: () => void
 }
 
 type UserFilter =
@@ -63,9 +65,11 @@ function AdminPage({
   onBack,
   onCreateEvent,
   onOpenTfilot,
+  onOpenMinyanStatistics,
   onOpenEvents,
   onOpenKiddush,
   onOpenNews,
+  onOpenDocuments,
 }: AdminPageProps) {
   const { firebaseUser } = useAuth()
 
@@ -684,6 +688,15 @@ useEffect(() => {
 
           <AdminMenuItem
             icon={
+              <Users className="h-6 w-6" />
+            }
+            title="Minjanstatistik"
+            description="Faktisk närvaro och genomförda minjanim"
+            onClick={onOpenMinyanStatistics}
+          />
+
+          <AdminMenuItem
+            icon={
               <FileText className="h-6 w-6" />
             }
             title="Händelser"
@@ -698,6 +711,15 @@ useEffect(() => {
             title="Nyheter"
             description="Publicera nyheter och meddelanden"
             onClick={onOpenNews}
+          />
+
+          <AdminMenuItem
+            icon={
+              <FileText className="h-6 w-6" />
+            }
+            title="Dokument"
+            description="Ladda upp och hantera medlemsdokument"
+            onClick={onOpenDocuments}
           />
 
           <AdminMenuItem
