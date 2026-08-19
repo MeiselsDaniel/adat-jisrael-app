@@ -449,7 +449,7 @@ function NewEventPage({
         await saveEvent(newEvent)
 
         if (
-          eventType === 'activity' &&
+          (eventType === 'activity' || eventType === 'shiur') &&
           publishAsNews &&
           !initialEvent
         ) {
@@ -967,7 +967,7 @@ function NewEventPage({
             </>
           )}
 
-          {eventType === 'activity' &&
+          {(eventType === 'activity' || eventType === 'shiur') &&
             !initialEvent && (
               <Toggle
                 label="Publicera även som nyhet"
