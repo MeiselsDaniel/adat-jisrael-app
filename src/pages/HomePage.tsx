@@ -64,6 +64,9 @@ const nextSaturday = addDays(nextFriday, 1)
 const secondFriday = addDays(nextFriday, 7)
 const secondSaturday = addDays(nextSaturday, 7)
 
+const thirdFriday = addDays(nextFriday, 14)
+const thirdSaturday = addDays(nextSaturday, 14)
+
 const fridayDateValue = formatDateValue(nextFriday)
 const saturdayDateValue = formatDateValue(nextSaturday)
 
@@ -72,6 +75,12 @@ const secondFridayDateValue =
 
 const secondSaturdayDateValue =
   formatDateValue(secondSaturday)
+
+const thirdFridayDateValue =
+  formatDateValue(thirdFriday)
+
+const thirdSaturdayDateValue =
+  formatDateValue(thirdSaturday)
 
 const scheduleWithKabbalat =
   synagogueSettings.schedule as typeof synagogueSettings.schedule & {
@@ -96,6 +105,20 @@ const secondKabbalatShabbat: Tefila = {
   dateValue: secondFridayDateValue,
   day: 'Fredag',
   date: formatSwedishDate(secondFriday),
+  title: 'Kabbalat Shabbat/Maariv',
+  time:
+    scheduleWithKabbalat.kabbalatShabbat ??
+    '19.30',
+  attending: 0,
+}
+
+const thirdKabbalatShabbat: Tefila = {
+  id: `${thirdFridayDateValue}-kabbalat-shabbat`,
+  firestoreId:
+    `${thirdFridayDateValue}-kabbalat-shabbat`,
+  dateValue: thirdFridayDateValue,
+  day: 'Fredag',
+  date: formatSwedishDate(thirdFriday),
   title: 'Kabbalat Shabbat/Maariv',
   time:
     scheduleWithKabbalat.kabbalatShabbat ??
@@ -354,7 +377,9 @@ useEffect(() => {
     currentHomeEvents.filter(
       (event) =>
         event.startDate >
-        secondSaturdayDateValue,
+          secondSaturdayDateValue &&
+        event.startDate <
+          thirdSaturdayDateValue,
     )
 
   const displayedKabbalatShabbat =
@@ -383,6 +408,19 @@ useEffect(() => {
       now,
     )
 
+  const displayedThirdKabbalatShabbat =
+    mergedTfilot.find(
+      (tefila) =>
+        tefila.firestoreId ===
+        thirdKabbalatShabbat.firestoreId,
+    ) ?? thirdKabbalatShabbat
+
+  const showThirdKabbalatShabbat =
+    isTefilaStillCurrent(
+      displayedThirdKabbalatShabbat,
+      now,
+    )
+
   const tfilotBeforeShabbat =
     mergedTfilot.filter(
       (tefila) =>
@@ -407,7 +445,11 @@ useEffect(() => {
     mergedTfilot.filter(
       (tefila) =>
         (tefila.dateValue ?? '') >
-        secondSaturdayDateValue,
+          secondSaturdayDateValue &&
+        (tefila.dateValue ?? '') <
+          thirdSaturdayDateValue &&
+        tefila.firestoreId !==
+          thirdKabbalatShabbat.firestoreId,
     )
 
   const itemsBeforeShabbat =
@@ -467,7 +509,7 @@ useEffect(() => {
 
       <TefilaInvitationCards />
 
-      <section className="space-y-3">
+      <section className="space-y-3 [&>*:nth-child(n+15)]:hidden">
         {itemsBeforeShabbat.map((item) =>
           item.type === 'tefila' ? (
             <HomeTefilaCard
@@ -551,6 +593,16 @@ useEffect(() => {
             />
           ),
         )}
+
+        {showThirdKabbalatShabbat && (
+          <ErevShabbatCard
+            tefila={displayedThirdKabbalatShabbat}
+          />
+        )}
+
+        <ProgramCard
+          dateValue={thirdSaturdayDateValue}
+        />
       </section>
 
       <SupportSection />
@@ -884,7 +936,8 @@ function ProgramCard({
     const actualHolidayNames =
       shabbatHebcalInfo.holidayNames.filter(
         (name) =>
-          !specialShabbatNames.includes(name),
+          !specialShabbatNames.includes(name) &&
+          name !== 'Leil Selichot',
       )
 
     const isHoliday =

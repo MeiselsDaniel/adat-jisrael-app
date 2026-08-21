@@ -1175,6 +1175,26 @@ function UserAdminCard({
             <Check className="h-4 w-4" />
             Godkänn medlem
           </button>
+
+          {!isCurrentUser && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => {
+                const confirmed = window.confirm(
+                  `Vill du avvisa ${user.name}? Personen får inte tillgång till appen.`,
+                )
+
+                if (confirmed) {
+                  onBlock()
+                }
+              }}
+              className="col-span-2 flex items-center justify-center gap-2 rounded-2xl bg-rose-50 px-3 py-3 text-xs font-bold text-rose-800 ring-1 ring-rose-200 disabled:opacity-60"
+            >
+              <UserX className="h-4 w-4" />
+              Avvisa
+            </button>
+          )}
         </div>
       )}
 

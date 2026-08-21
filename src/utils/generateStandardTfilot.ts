@@ -1,7 +1,7 @@
 import { synagogueSettings } from '../data/settings'
 import type { Tefila } from '../types'
 
-const DAYS_TO_GENERATE = 14
+const DAYS_TO_GENERATE = 21
 
 const weekdayNames = [
   'Söndag',

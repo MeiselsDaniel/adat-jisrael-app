@@ -103,7 +103,7 @@ function MinyanCard({
   const [
     draftActualAttendance,
     setDraftActualAttendance,
-  ] = useState(attendance)
+  ] = useState<number | ''>(attendance)
 
   const [saving, setSaving] =
     useState(false)
@@ -245,7 +245,9 @@ function MinyanCard({
       async () => {
         await onConfirm(
           result,
-          draftActualAttendance,
+          draftActualAttendance === ''
+            ? 0
+            : draftActualAttendance,
         )
         setAdminOpen(false)
       },
@@ -620,12 +622,14 @@ function MinyanCard({
                       }
                       onChange={(event) =>
                         setDraftActualAttendance(
-                          Math.max(
-                            0,
-                            Number(
-                              event.target.value,
-                            ),
-                          ),
+                          event.target.value === ''
+                            ? ''
+                            : Math.max(
+                                0,
+                                Number(
+                                  event.target.value,
+                                ),
+                              ),
                         )
                       }
                       className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-600"
