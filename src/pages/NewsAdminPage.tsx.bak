@@ -71,12 +71,6 @@ function NewsAdminPage({
   const [imageUrl, setImageUrl] =
     useState('')
 
-  const [linkUrl, setLinkUrl] =
-    useState('')
-
-  const [linkLabel, setLinkLabel] =
-    useState('Läs mer')
-
   const [isPinned, setIsPinned] =
     useState(false)
 
@@ -156,8 +150,6 @@ const [status, setStatus] =
     setExcerpt('')
     setContent('')
     setImageUrl('')
-    setLinkUrl('')
-    setLinkLabel('Läs mer')
     setIsPinned(false)
     setCategory('news')
     setStatus('published')
@@ -180,12 +172,6 @@ const [status, setStatus] =
     setContent(post.content)
     setImageUrl(
       post.imageUrl ?? '',
-    )
-    setLinkUrl(
-      post.linkUrl ?? '',
-    )
-    setLinkLabel(
-      post.linkLabel ?? 'Läs mer',
     )
     setIsPinned(
       post.isPinned,
@@ -309,14 +295,6 @@ const [status, setStatus] =
             imageUrl:
               imageUrl.trim() ||
               null,
-            linkUrl:
-              linkUrl.trim() ||
-              null,
-            linkLabel:
-              linkUrl.trim()
-                ? linkLabel.trim() ||
-                  'Läs mer'
-                : null,
             isPinned,
 
             category,
@@ -331,14 +309,6 @@ const [status, setStatus] =
           imageUrl:
             imageUrl.trim() ||
             undefined,
-          linkUrl:
-            linkUrl.trim() ||
-            undefined,
-          linkLabel:
-            linkUrl.trim()
-              ? linkLabel.trim() ||
-                'Läs mer'
-              : undefined,
           isPinned,
 
           category,
@@ -590,65 +560,12 @@ const [status, setStatus] =
             />
           </label>
 
-          <section className="space-y-4 rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
-            <div>
-              <p className="font-bold text-[#183b70]">
-                Extern länk
-              </p>
-
-              <p className="mt-1 text-xs leading-5 text-slate-500">
-                Valfritt. Lägg till en knapp i nyheten som länkar till exempelvis en anmälan eller extern eventsida.
-              </p>
-            </div>
-
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">
-                Länk
-              </span>
-
-              <input
-                type="url"
-                value={linkUrl}
-                onChange={(event) =>
-                  setLinkUrl(
-                    event.target.value,
-                  )
-                }
-                placeholder="https://..."
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-600"
-              />
-            </label>
-
-            {linkUrl.trim() && (
-              <label className="block">
-                <span className="text-sm font-bold text-slate-700">
-                  Text på knappen
-                </span>
-
-                <input
-                  value={linkLabel}
-                  onChange={(event) =>
-                    setLinkLabel(
-                      event.target.value,
-                    )
-                  }
-                  placeholder="Läs mer"
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-600"
-                />
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Exempel: Läs mer, Anmäl dig eller Till eventet
-                </p>
-              </label>
-            )}
-          </section>
-
           <div>
             <p className="text-sm font-bold text-slate-700">
               Kategori
             </p>
 
-            <div className="mt-2 grid grid-cols-3 gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() =>
@@ -661,20 +578,6 @@ const [status, setStatus] =
                 }`}
               >
                 Nyhet
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setCategory('externalEvent')
-                }
-                className={`rounded-2xl px-3 py-3 text-sm font-bold ${
-                  category === 'externalEvent'
-                    ? 'bg-sky-700 text-white'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
-              >
-                Externt event
               </button>
 
               <button

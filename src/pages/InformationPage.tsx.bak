@@ -320,12 +320,6 @@ return (
             </span>
           )}
 
-          {post.category === 'externalEvent' && (
-            <span className="rounded-full bg-sky-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-sky-800">
-              Externt event
-            </span>
-          )}
-
           {!isRead && (
             <span className="rounded-full bg-rose-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
               Ny
@@ -340,25 +334,6 @@ return (
         <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-500">
           {post.excerpt}
         </p>
-
-        {post.linkUrl && (
-          <a
-            href={post.linkUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(event) => {
-              event.stopPropagation()
-              onRead()
-            }}
-            className="mt-4 flex w-full items-center justify-between rounded-2xl bg-[#183b70] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#102d57]"
-          >
-            <span>
-              {post.linkLabel || 'Läs mer'}
-            </span>
-
-            <ChevronRight className="h-4 w-4" />
-          </a>
-        )}
 
         {isFundraiser &&
           fundraiser &&
