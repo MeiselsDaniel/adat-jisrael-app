@@ -439,7 +439,9 @@ function convertFirebaseProfile(
   profile: FirebaseUserProfile,
 ): AppUser {
   const category =
-    getCategoryForRole(profile.role)
+    profile.isSponsor
+      ? 'member'
+      : getCategoryForRole(profile.role)
 
   return {
     id: profile.uid,

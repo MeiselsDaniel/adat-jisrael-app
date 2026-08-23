@@ -657,6 +657,30 @@ useEffect(() => {
                         value,
                       )
                     }
+                    onChangeSponsor={async () => {
+                      try {
+                        setSavingUserId(user.uid)
+                        setError('')
+
+                        await updateUserProfile(
+                          user.uid,
+                          {
+                            isSponsor:
+                              !user.isSponsor,
+                          },
+                        )
+                      } catch (error) {
+                        console.error(
+                          'Kunde inte ändra sponsorstatus:',
+                          error,
+                        )
+                        setError(
+                          'Kunde inte ändra sponsorstatus.',
+                        )
+                      } finally {
+                        setSavingUserId(null)
+                      }
+                    }}
                     onBlock={() =>
                       blockAccount(user.uid)
                     }
@@ -1072,6 +1096,7 @@ type UserAdminCardProps = {
   onChangeMinyanEligibility: (
     value: boolean,
   ) => void
+  onChangeSponsor: () => void
   onBlock: () => void
   onRestore: () => void
 }
@@ -1085,6 +1110,7 @@ function UserAdminCard({
   onChangeRole,
   onPromoteToAdmin,
   onChangeMinyanEligibility,
+  onChangeSponsor,
   onBlock,
   onRestore,
 }: UserAdminCardProps) {
@@ -1135,6 +1161,12 @@ function UserAdminCard({
           <div className="mt-3 flex flex-wrap gap-2">
             <RoleBadge role={user.role} />
             <StatusBadge status={user.status} />
+
+            {user.isSponsor && (
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                Sponsor
+              </span>
+            )}
 
             {user.status === 'approved' &&
               user.role !== 'guest' && (
@@ -1278,6 +1310,35 @@ function UserAdminCard({
                     </button>
                   </div>
                 </div>
+
+              {user.role === 'guest' && (
+                <div className="rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-100">
+                  <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+                    Sponsor
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Sponsorer är registrerade som gäster
+                    men får samma åtkomst till appen som
+                    medlemmar.
+                  </p>
+
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={onChangeSponsor}
+                    className={`mt-3 flex w-full items-center justify-center rounded-xl px-3 py-2.5 text-xs font-bold ${
+                      user.isSponsor
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-white text-amber-800 ring-1 ring-amber-200'
+                    } disabled:opacity-60`}
+                  >
+                    {user.isSponsor
+                      ? 'Ta bort sponsorstatus'
+                      : 'Markera som sponsor'}
+                  </button>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <RoleButton

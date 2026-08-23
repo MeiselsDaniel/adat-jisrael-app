@@ -54,6 +54,12 @@ export type FirebaseUserProfile = {
    */
   countsForMinyan?: boolean
 
+  /*
+   * Sätts endast av admin.
+   * Sponsor är inte medlem men får medlemsåtkomst i appen.
+   */
+  isSponsor?: boolean
+
   uid: string
   firstName: string
   lastName: string
@@ -92,6 +98,7 @@ export type UpdateUserProfileInput = {
   role?: FirebaseUserRole
   status?: FirebaseUserStatus
   countsForMinyan?: boolean
+  isSponsor?: boolean
 }
 
 export async function createUserProfile({
