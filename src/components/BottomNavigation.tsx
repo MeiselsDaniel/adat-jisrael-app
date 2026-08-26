@@ -22,6 +22,13 @@ import {
   subscribeToUserNewsReads,
   type NewsRead,
 } from '../services/newsReadsService'
+import {
+  subscribeToEventsBetween,
+  type StoredAppEvent,
+} from '../services/eventService'
+import {
+  getUnreadEvents,
+} from '../services/eventBadgeService'
 
 type BottomNavigationProps = {
   page: Page
@@ -42,6 +49,12 @@ function BottomNavigation({
 
   const [newsReads, setNewsReads] =
     useState<NewsRead[]>([])
+
+  const [calendarEvents, setCalendarEvents] =
+    useState<StoredAppEvent[]>([])
+
+  const [eventBadgeVersion, setEventBadgeVersion] =
+    useState(0)
 
   const isMember =
     user.permissions.viewMemberInformation &&
@@ -88,6 +101,63 @@ function BottomNavigation({
     isMember,
   ])
 
+  useEffect(() => {
+    if (!firebaseUser) {
+      setCalendarEvents([])
+      return
+    }
+
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+
+    const end = new Date(start)
+    end.setDate(end.getDate() + 90)
+
+    function formatDate(date: Date) {
+      const year = date.getFullYear()
+      const month = String(
+        date.getMonth() + 1,
+      ).padStart(2, '0')
+      const day = String(
+        date.getDate(),
+      ).padStart(2, '0')
+
+      return `${year}-${month}-${day}`
+    }
+
+    return subscribeToEventsBetween(
+      formatDate(start),
+      formatDate(end),
+      setCalendarEvents,
+      (error) => {
+        console.error(
+          'Kunde inte läsa evenemang till kalenderbadgen:',
+          error,
+        )
+      },
+    )
+  }, [firebaseUser])
+
+  useEffect(() => {
+    function handleEventReadsChanged() {
+      setEventBadgeVersion(
+        (current) => current + 1,
+      )
+    }
+
+    window.addEventListener(
+      'event-reads-changed',
+      handleEventReadsChanged,
+    )
+
+    return () => {
+      window.removeEventListener(
+        'event-reads-changed',
+        handleEventReadsChanged,
+      )
+    }
+  }, [])
+
   const unreadNewsCount =
     useMemo(() => {
       const readIds =
@@ -107,6 +177,22 @@ function BottomNavigation({
       publishedNews,
     ])
 
+  const unreadEventCount =
+    useMemo(() => {
+      if (!firebaseUser) {
+        return 0
+      }
+
+      return getUnreadEvents(
+        firebaseUser.uid,
+        calendarEvents,
+      ).length
+    }, [
+      firebaseUser,
+      calendarEvents,
+      eventBadgeVersion,
+    ])
+
   if (!isMember) {
     return (
       <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-slate-200 bg-white/95 px-3 pt-2 backdrop-blur [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
@@ -121,6 +207,11 @@ function BottomNavigation({
           active={page === 'calendar'}
           label="Kalender"
           icon={<CalendarDays className="h-5 w-5" />}
+        badge={
+          unreadEventCount > 0
+            ? unreadEventCount
+            : undefined
+        }
           onClick={() => setPage('calendar')}
         />
 
@@ -154,6 +245,11 @@ function BottomNavigation({
         active={page === 'calendar'}
         label="Kalender"
         icon={<CalendarDays className="h-5 w-5" />}
+        badge={
+          unreadEventCount > 0
+            ? unreadEventCount
+            : undefined
+        }
         onClick={() => setPage('calendar')}
       />
 

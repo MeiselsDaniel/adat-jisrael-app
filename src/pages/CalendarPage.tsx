@@ -31,6 +31,10 @@ import DeleteJahrzeitDialog from '../components/jahrzeit/DeleteJahrzeitDialog'
 import TefilaPreferencesCard from '../components/TefilaPreferencesCard'
 import RichEventCard from '../components/RichEventCard'
 import type { Tefila } from '../types'
+import {
+  getUnreadEvents,
+  markEventsAsSeen,
+} from '../services/eventBadgeService'
 
 type CalendarFilter =
   | 'all'
@@ -106,6 +110,9 @@ function CalendarPage() {
 
   const [error, setError] =
     useState('')
+
+  const [eventBadgeVersion, setEventBadgeVersion] =
+    useState(0)
 
   const range = useMemo(() => {
     const start = new Date()
@@ -198,6 +205,39 @@ function CalendarPage() {
     ],
   )
 
+  const unreadEventCount =
+    useMemo(() => {
+      if (!firebaseUser) {
+        return 0
+      }
+
+      return getUnreadEvents(
+        firebaseUser.uid,
+        events,
+      ).length
+    }, [
+      firebaseUser,
+      events,
+      eventBadgeVersion,
+    ])
+
+  function openEventsFilter() {
+    setFilter('events')
+
+    if (!firebaseUser) {
+      return
+    }
+
+    markEventsAsSeen(
+      firebaseUser.uid,
+      events,
+    )
+
+    setEventBadgeVersion(
+      (current) => current + 1,
+    )
+  }
+
   const filteredItems =
     items.filter((item) => {
       if (filter === 'all') {
@@ -257,7 +297,8 @@ function CalendarPage() {
         <FilterButton
           label="Evenemang"
           active={filter === 'events'}
-          onClick={() => setFilter('events')}
+          showDot={unreadEventCount > 0}
+          onClick={openEventsFilter}
         />
 
         {canRegisterJahrzeit && (
@@ -933,10 +974,12 @@ function CalendarRow({
 function FilterButton({
   label,
   active,
+  showDot = false,
   onClick,
 }: {
   label: string
   active: boolean
+  showDot?: boolean
   onClick: () => void
 }) {
   return (
@@ -949,7 +992,13 @@ function FilterButton({
           : 'text-slate-500'
       }`}
     >
-      {label}
+      <span className="relative inline-flex items-center">
+        {label}
+
+        {showDot && (
+          <span className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-rose-600 ring-2 ring-white" />
+        )}
+      </span>
     </button>
   )
 }

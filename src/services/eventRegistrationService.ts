@@ -92,6 +92,29 @@ export async function saveEventRegistration(
   )
 }
 
+export async function saveAdminEventRegistration(input: {
+  eventId: string
+  userId?: string
+  userName: string
+  isMember?: boolean
+}): Promise<void> {
+  const manualId =
+    input.userId ??
+    `admin-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`
+
+  await saveEventRegistration({
+    eventId: input.eventId,
+    userId: manualId,
+    userName: input.userName,
+    partySize: 1,
+    memberCount: input.isMember ? 1 : 0,
+    nonMemberCount: input.isMember ? 0 : 1,
+    participantNames: [],
+  })
+}
+
 export async function updateEventRegistrationPaid(
   registrationId: string,
   paid: boolean,

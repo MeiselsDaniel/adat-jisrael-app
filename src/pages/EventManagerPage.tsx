@@ -28,10 +28,15 @@ import {
 
 import {
   countEventParticipants,
+  saveAdminEventRegistration,
   subscribeToEventRegistrations,
   updateEventRegistrationPaid,
   type StoredEventRegistration,
 } from '../services/eventRegistrationService'
+import {
+  subscribeToUsers,
+  type FirebaseUserProfile,
+} from '../firebase/users'
 import type {
   EventStatus,
   EventType,
@@ -362,6 +367,63 @@ function EventAdminCard({
     setSavingPaidId,
   ] = useState<string | null>(null)
 
+  const [
+    addParticipantOpen,
+    setAddParticipantOpen,
+  ] = useState(false)
+
+  const [
+    participantMode,
+    setParticipantMode,
+  ] = useState<'user' | 'manual'>('user')
+
+  const [
+    users,
+    setUsers,
+  ] = useState<FirebaseUserProfile[]>([])
+
+  const [
+    selectedUserId,
+    setSelectedUserId,
+  ] = useState('')
+
+  const [
+    manualParticipantName,
+    setManualParticipantName,
+  ] = useState('')
+
+  const [
+    manualIsMember,
+    setManualIsMember,
+  ] = useState(false)
+
+  const [
+    participantSearch,
+    setParticipantSearch,
+  ] = useState('')
+
+  const [
+    addingParticipant,
+    setAddingParticipant,
+  ] = useState(false)
+
+  useEffect(() => {
+    if (!addParticipantOpen) {
+      return
+    }
+
+    return subscribeToUsers(
+      (items) => {
+        setUsers(
+          items.filter(
+            (user) =>
+              user.status === 'approved',
+          ),
+        )
+      },
+    )
+  }, [addParticipantOpen])
+
   useEffect(() => {
     if (!registrationsOpen) {
       return
@@ -397,6 +459,107 @@ function EventAdminCard({
       (registration) =>
         registration.paid === true,
     ).length
+
+  const filteredParticipantUsers =
+    users.filter((user) => {
+      const search =
+        participantSearch
+          .trim()
+          .toLowerCase()
+
+      if (!search) {
+        return true
+      }
+
+      return (
+        user.name
+          .toLowerCase()
+          .includes(search) ||
+        user.email
+          .toLowerCase()
+          .includes(search)
+      )
+    })
+
+  async function handleAddParticipant() {
+    if (addingParticipant) {
+      return
+    }
+
+    try {
+      setAddingParticipant(true)
+
+      if (participantMode === 'user') {
+        const selectedUser =
+          users.find(
+            (user) =>
+              user.uid === selectedUserId,
+          )
+
+        if (!selectedUser) {
+          window.alert(
+            'Välj en användare först.',
+          )
+          return
+        }
+
+        const alreadyRegistered =
+          registrations.some(
+            (registration) =>
+              registration.userId ===
+              selectedUser.uid,
+          )
+
+        if (alreadyRegistered) {
+          window.alert(
+            `${selectedUser.name} är redan anmäld.`,
+          )
+          return
+        }
+
+        await saveAdminEventRegistration({
+          eventId: event.id,
+          userId: selectedUser.uid,
+          userName: selectedUser.name,
+          isMember:
+            selectedUser.role === 'member',
+        })
+      } else {
+        const name =
+          manualParticipantName.trim()
+
+        if (!name) {
+          window.alert(
+            'Skriv deltagarens namn.',
+          )
+          return
+        }
+
+        await saveAdminEventRegistration({
+          eventId: event.id,
+          userName: name,
+          isMember: manualIsMember,
+        })
+      }
+
+      setSelectedUserId('')
+      setParticipantSearch('')
+      setManualParticipantName('')
+      setManualIsMember(false)
+      setAddParticipantOpen(false)
+    } catch (error) {
+      console.error(
+        'Kunde inte lägga till deltagare:',
+        error,
+      )
+
+      window.alert(
+        'Deltagaren kunde inte läggas till.',
+      )
+    } finally {
+      setAddingParticipant(false)
+    }
+  }
 
   async function handlePaidChange(
     registration: StoredEventRegistration,
@@ -536,6 +699,159 @@ function EventAdminCard({
 
           {registrationsOpen && (
             <div className="mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="border-b border-slate-100 p-3">
+                {!addParticipantOpen ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAddParticipantOpen(true)
+                    }
+                    className="w-full rounded-xl bg-[#183b70] px-4 py-2.5 text-sm font-bold text-white"
+                  >
+                    + Lägg till deltagare
+                  </button>
+                ) : (
+                  <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                    <p className="text-sm font-black text-[#183b70]">
+                      Lägg till deltagare
+                    </p>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setParticipantMode('user')
+                        }
+                        className={`rounded-xl px-3 py-2 text-xs font-bold ${
+                          participantMode === 'user'
+                            ? 'bg-[#183b70] text-white'
+                            : 'bg-white text-slate-600 ring-1 ring-slate-200'
+                        }`}
+                      >
+                        Befintlig användare
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setParticipantMode('manual')
+                        }
+                        className={`rounded-xl px-3 py-2 text-xs font-bold ${
+                          participantMode === 'manual'
+                            ? 'bg-[#183b70] text-white'
+                            : 'bg-white text-slate-600 ring-1 ring-slate-200'
+                        }`}
+                      >
+                        Annan person
+                      </button>
+                    </div>
+
+                    {participantMode === 'user' ? (
+                      <div className="mt-3 space-y-2">
+                        <input
+                          type="text"
+                          value={participantSearch}
+                          onChange={(event) =>
+                            setParticipantSearch(
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Sök namn eller e-post…"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
+                        />
+
+                        <select
+                          value={selectedUserId}
+                          onChange={(event) =>
+                            setSelectedUserId(
+                              event.target.value,
+                            )
+                          }
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none"
+                        >
+                          <option value="">
+                            Välj användare…
+                          </option>
+
+                          {filteredParticipantUsers.map(
+                            (user) => (
+                              <option
+                                key={user.uid}
+                                value={user.uid}
+                              >
+                                {user.name} ·{' '}
+                                {user.role === 'member'
+                                  ? 'Medlem'
+                                  : user.isSponsor
+                                    ? 'Sponsor'
+                                    : 'Gäst'}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="mt-3 space-y-2">
+                        <input
+                          type="text"
+                          value={manualParticipantName}
+                          onChange={(event) =>
+                            setManualParticipantName(
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Namn"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
+                        />
+
+                        <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-3 py-2.5 ring-1 ring-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={manualIsMember}
+                            onChange={(event) =>
+                              setManualIsMember(
+                                event.target.checked,
+                              )
+                            }
+                            className="h-4 w-4 accent-[#183b70]"
+                          />
+
+                          <span className="text-xs font-bold text-slate-600">
+                            Personen är medlem
+                          </span>
+                        </label>
+                      </div>
+                    )}
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        disabled={addingParticipant}
+                        onClick={() =>
+                          setAddParticipantOpen(false)
+                        }
+                        className="rounded-xl bg-white px-3 py-2.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200 disabled:opacity-60"
+                      >
+                        Avbryt
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={addingParticipant}
+                        onClick={() => {
+                          void handleAddParticipant()
+                        }}
+                        className="rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-60"
+                      >
+                        {addingParticipant
+                          ? 'Lägger till…'
+                          : 'Lägg till'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {registrationsLoading ? (
                 <div className="flex items-center justify-center gap-2 px-4 py-5 text-sm font-semibold text-slate-500">
                   <LoaderCircle className="h-4 w-4 animate-spin" />
