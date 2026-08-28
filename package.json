@@ -15,6 +15,7 @@
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
+    "@capacitor/status-bar": "^8.0.3",
     "@hebcal/core": "^6.9.1",
     "@tailwindcss/vite": "^4.3.3",
     "firebase": "^12.17.1",

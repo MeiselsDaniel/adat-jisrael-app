@@ -8,8 +8,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = CAPBridgeViewController()
+        window?.backgroundColor = .white
+
+        let bridgeViewController = CAPBridgeViewController()
+        bridgeViewController.view.backgroundColor = .white
+
+        window?.rootViewController = bridgeViewController
         window?.makeKeyAndVisible()
+
+        if let statusBarFrame = windowScene.statusBarManager?.statusBarFrame {
+            let statusBarBackground = UIView(frame: statusBarFrame)
+            statusBarBackground.backgroundColor = .white
+            statusBarBackground.autoresizingMask = [.flexibleWidth]
+            statusBarBackground.isUserInteractionEnabled = false
+            window?.addSubview(statusBarBackground)
+        }
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }

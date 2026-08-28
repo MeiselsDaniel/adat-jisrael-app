@@ -1,9 +1,11 @@
+import { Capacitor } from '@capacitor/core'
 import {
   useEffect,
   useMemo,
   useState,
 } from 'react'
 import { registerNativePush } from './services/nativePushService'
+import { StatusBar, Style } from '@capacitor/status-bar'
 import BottomNavigation from './components/BottomNavigation'
 import Header from './components/Header'
 import { getDefaultPermissions } from './data/users'
@@ -50,6 +52,21 @@ type AdminView =
   | 'newEvent'
 
 function App() {
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== 'ios') {
+      return
+    }
+
+    void StatusBar.setOverlaysWebView({
+      overlay: false,
+    })
+
+    void StatusBar.setStyle({
+      style: Style.Light,
+    })
+
+  }, [])
+
   const {
     firebaseUser,
     profile,
