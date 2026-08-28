@@ -3,6 +3,7 @@ import {
   useMemo,
   useState,
 } from 'react'
+import { registerNativePush } from './services/nativePushService'
 import BottomNavigation from './components/BottomNavigation'
 import Header from './components/Header'
 import { getDefaultPermissions } from './data/users'
@@ -37,9 +38,6 @@ import type {
   FirebaseUserProfile,
   FirebaseUserRole,
 } from './firebase/users'
-import {
-  listenForForegroundPush,
-} from './services/pushNotificationService'
 
 type AdminView =
   | 'dashboard'
@@ -60,6 +58,21 @@ function App() {
     authError,
     logout,
   } = useAuth()
+
+  useEffect(() => {
+    if (!firebaseUser) {
+      return
+    }
+
+    void registerNativePush(
+      firebaseUser.uid,
+    ).catch((error) => {
+      console.error(
+        'Kunde inte registrera native push:',
+        error,
+      )
+    })
+  }, [firebaseUser])
 
   const [page, setPage] = useState<Page>('home')
   const [adminOpen, setAdminOpen] = useState(false)
@@ -93,36 +106,50 @@ function App() {
       return
     }
 
-    const unsubscribe =
-      listenForForegroundPush(
-        (payload) => {
-          const message =
-            payload as {
-              notification?: {
-                title?: string
-                body?: string
-              }
-            }
+    let unsubscribe = () => {}
+    let cancelled = false
 
-          setForegroundPush({
-            title:
-              message.notification?.title ??
-              'Ny notis',
-            body:
-              message.notification?.body ??
-              '',
-          })
+    if (!window.location.protocol.startsWith('capacitor')) {
+      void import('./services/pushNotificationService')
+        .then(({ listenForForegroundPush }) => {
+          if (cancelled) {
+            return
+          }
 
-          window.setTimeout(
-            () => {
-              setForegroundPush(null)
+          unsubscribe = listenForForegroundPush(
+            (payload) => {
+              const message =
+                payload as {
+                  notification?: {
+                    title?: string
+                    body?: string
+                  }
+                }
+
+              setForegroundPush({
+                title:
+                  message.notification?.title ??
+                  'Ny notis',
+                body:
+                  message.notification?.body ??
+                  '',
+              })
+
+              window.setTimeout(
+                () => {
+                  setForegroundPush(null)
+                },
+                8000,
+              )
             },
-            8000,
           )
-        },
-      )
+        })
+    }
 
-    return unsubscribe
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
   }, [firebaseUser])
 
   function handleBottomNavigation(

@@ -9,15 +9,18 @@ import {
   where,
 } from 'firebase/firestore'
 import {
+  getMessaging,
   isSupported,
   onMessage,
   onRegistered,
   register,
 } from 'firebase/messaging'
 import {
+  app,
   db,
-  messaging,
 } from '../firebase/config'
+
+const messaging = getMessaging(app)
 
 export const VAPID_KEY =
   'BIDKHBK90dA0Kjr980kvLFTnExsIHR_07gRsQJwxAeO62F8Pl7cu3DLwJNC7tPENBGBDDgWAXGoCERnbaYzlxxg'

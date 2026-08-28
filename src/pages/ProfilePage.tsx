@@ -21,12 +21,11 @@ import {
   updateUserProfile,
   type NotificationPreferences,
 } from '../firebase/users'
-import {
-  enablePushNotifications,
-  getNotificationPermission,
-  hasPushRegistration,
-} from '../services/pushNotificationService'
 import { getHebrewDateFromIso } from '../utils/hebcal'
+
+
+const isNativeApp =
+  window.location.protocol.startsWith('capacitor')
 
 type ProfilePageProps = {
   onBack: () => void
@@ -83,8 +82,8 @@ function ProfilePage({
   const [
     pushPermission,
     setPushPermission,
-  ] = useState(
-    getNotificationPermission(),
+  ] = useState<'default' | 'granted' | 'denied' | 'unsupported'>(
+    isNativeApp ? 'default' : 'unsupported',
   )
 
   const [
@@ -115,7 +114,20 @@ function ProfilePage({
     let active = true
 
     async function checkPushRegistration() {
+      if (isNativeApp) {
+        setPushRegistered(false)
+        setCheckingPush(false)
+        return
+      }
+
       try {
+        const {
+          enablePushNotifications,
+          getNotificationPermission,
+          hasPushRegistration,
+        } = await import(
+          '../services/pushNotificationService'
+        )
         const registered =
           await hasPushRegistration(
             firebaseUser!.uid,
@@ -188,6 +200,19 @@ function ProfilePage({
     setPushMessage('')
 
     try {
+      if (isNativeApp) {
+        throw new Error(
+          'Native iOS-push konfigureras separat.'
+        )
+      }
+
+      const {
+        enablePushNotifications,
+        getNotificationPermission,
+      } = await import(
+        '../services/pushNotificationService'
+      )
+
       await enablePushNotifications(
         firebaseUser.uid,
       )
@@ -223,7 +248,9 @@ function ProfilePage({
       }
 
       setPushPermission(
-        getNotificationPermission(),
+        'Notification' in window
+          ? Notification.permission
+          : 'unsupported',
       )
 
       setError(
