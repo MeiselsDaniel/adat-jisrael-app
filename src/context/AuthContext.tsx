@@ -7,7 +7,9 @@ import {
 import type { ReactNode } from 'react'
 import {
   deleteUser,
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   type User,
 } from 'firebase/auth'
 import { auth } from '../firebase/config'
@@ -18,6 +20,7 @@ import {
 } from '../firebase/auth'
 import {
   createUserProfile,
+  deleteUserProfile,
   getUserProfile,
   type FirebaseUserProfile,
 } from '../firebase/users'
@@ -47,6 +50,7 @@ type AuthContextValue = {
   ) => Promise<void>
 
   logout: () => Promise<void>
+  deleteAccount: (password: string) => Promise<void>
   refreshProfile: () => Promise<void>
 }
 
@@ -212,6 +216,51 @@ async function logout() {
     setProfile(null)
   }
 
+  async function deleteAccount(
+    password: string,
+  ) {
+    setAuthError(null)
+
+    if (!firebaseUser || !firebaseUser.email) {
+      throw new Error('Ingen inloggad användare.')
+    }
+
+    const user = firebaseUser
+    const uid = user.uid
+    const email = user.email
+
+    if (!email) {
+      throw new Error(
+        'Kontot saknar e-postadress.',
+      )
+    }
+
+    const credential =
+      EmailAuthProvider.credential(
+        email,
+        password,
+      )
+
+    /*
+     * Firebase kräver färsk autentisering för
+     * känsliga åtgärder som permanent kontoradering.
+     */
+    await reauthenticateWithCredential(
+      user,
+      credential,
+    )
+
+    /*
+     * När autentiseringen är verifierad raderas
+     * användarprofilen och därefter själva kontot.
+     */
+    await deleteUserProfile(uid)
+    await deleteUser(user)
+
+    setProfile(null)
+    setFirebaseUser(null)
+  }
+
   async function refreshProfile() {
     if (!firebaseUser) {
       setProfile(null)
@@ -242,6 +291,7 @@ async function logout() {
       login,
       register,
       logout,
+      deleteAccount,
       refreshProfile,
     }),
     [

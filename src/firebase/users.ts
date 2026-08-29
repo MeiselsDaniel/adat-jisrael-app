@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -133,6 +134,12 @@ export async function createUserProfile({
   }
 
   await setDoc(doc(db, 'users', uid), profile)
+}
+
+export async function deleteUserProfile(
+  uid: string,
+): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid))
 }
 
 export async function getUserProfile(

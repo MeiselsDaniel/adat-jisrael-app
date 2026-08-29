@@ -52,7 +52,7 @@ type AdminView =
   | 'newEvent'
 
 function App() {
-useEffect(() => {
+  useEffect(() => {
     if (Capacitor.getPlatform() !== 'ios') {
       return
     }
@@ -93,17 +93,7 @@ useEffect(() => {
   }, [firebaseUser])
 
   const [page, setPage] = useState<Page>('home')
-  
-
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'auto',
-    })
-  }, [page])
-
-const [adminOpen, setAdminOpen] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(false)
   const [adminView, setAdminView] =
     useState<AdminView>('dashboard')
 

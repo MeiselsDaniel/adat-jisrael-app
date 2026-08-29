@@ -6,6 +6,7 @@ import {
   Megaphone,
   PartyPopper,
   Star,
+  Trash2,
   Landmark,
   Flame,
 } from 'lucide-react'
@@ -29,10 +30,12 @@ const isNativeApp =
 
 type ProfilePageProps = {
   onBack: () => void
+  onDeleteAccount: () => void
 }
 
 function ProfilePage({
   onBack,
+  onDeleteAccount,
 }: ProfilePageProps) {
   const {
     firebaseUser,
@@ -115,8 +118,43 @@ function ProfilePage({
 
     async function checkPushRegistration() {
       if (isNativeApp) {
-        setPushRegistered(false)
-        setCheckingPush(false)
+        try {
+          const { FirebaseMessaging } =
+            await import(
+              '@capacitor-firebase/messaging'
+            )
+
+          const permission =
+            await FirebaseMessaging.checkPermissions()
+
+          if (!active) {
+            return
+          }
+
+          if (permission.receive === 'granted') {
+            setPushPermission('granted')
+            setPushRegistered(true)
+          } else if (
+            permission.receive === 'denied'
+          ) {
+            setPushPermission('denied')
+            setPushRegistered(false)
+          } else {
+            setPushPermission('default')
+            setPushRegistered(false)
+          }
+        } catch (caughtError) {
+          console.error(
+            'Kunde inte kontrollera native push:',
+            caughtError,
+          )
+          setPushRegistered(false)
+        } finally {
+          if (active) {
+            setCheckingPush(false)
+          }
+        }
+
         return
       }
 
@@ -641,6 +679,33 @@ function ProfilePage({
                 {pushMessage}
               </p>
             )}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-rose-200 bg-white p-5 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-700">
+            <Trash2 className="h-5 w-5" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold text-rose-800">
+              Ta bort konto
+            </h2>
+
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Radera ditt konto och dina personuppgifter
+              permanent. Detta går inte att ångra.
+            </p>
+
+            <button
+              type="button"
+              onClick={onDeleteAccount}
+              className="mt-4 w-full rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800 transition hover:bg-rose-100"
+            >
+              Ta bort mitt konto
+            </button>
           </div>
         </div>
       </section>
