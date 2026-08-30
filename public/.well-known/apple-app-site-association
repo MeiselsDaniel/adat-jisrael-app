@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "X2G7972396.se.adatjisrael.app"
+        ],
+        "components": [
+          {
+            "/": "/event/*",
+            "comment": "Adat Jisrael event links"
+          }
+        ]
+      }
+    ]
+  }
+}

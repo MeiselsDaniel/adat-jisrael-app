@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/event/:path*",
       "destination": "/index.html"
     }
   ]

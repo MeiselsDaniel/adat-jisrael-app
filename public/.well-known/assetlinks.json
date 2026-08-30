@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "se.adatjisrael.app",
+      "sha256_cert_fingerprints": [
+        "8E:C1:E6:B9:35:D0:15:85:9E:DB:95:8D:FA:0C:0B:21:E2:B1:DC:57:D6:FF:26:08:53:F0:28:FB:BD:50:A3:77",
+        "2D:81:1E:37:A4:8D:D2:83:7C:B4:53:75:C6:9D:83:F8:12:CC:88:AB:98:7C:4F:45:70:BD:2B:4C:FB:74:38:F9"
+      ]
+    }
+  }
+]

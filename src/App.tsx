@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import {
   useEffect,
   useMemo,
@@ -112,13 +113,56 @@ useEffect(() => {
 
   const [page, setPage] = useState<Page>('home')
 
-  const [sharedEventId] = useState<string | null>(
-    () =>
-      getSharedEventId(
-        window.location.pathname,
-      ),
-  )
+  const [sharedEventId, setSharedEventId] =
+    useState<string | null>(
+      () =>
+        getSharedEventId(
+          window.location.pathname,
+        ),
+    )
   
+
+  useEffect(() => {
+    const handleAppUrl = (url: string) => {
+      try {
+        const parsedUrl = new URL(url)
+        const eventId = getSharedEventId(
+          parsedUrl.pathname,
+        )
+
+        if (eventId) {
+          setSharedEventId(eventId)
+        }
+      } catch (error) {
+        console.error(
+          'Kunde inte läsa applänken:',
+          error,
+        )
+      }
+    }
+
+    void CapacitorApp.getLaunchUrl().then(
+      (launchUrl) => {
+        if (launchUrl?.url) {
+          handleAppUrl(launchUrl.url)
+        }
+      },
+    )
+
+    const listenerPromise =
+      CapacitorApp.addListener(
+        'appUrlOpen',
+        ({ url }) => {
+          handleAppUrl(url)
+        },
+      )
+
+    return () => {
+      void listenerPromise.then(
+        (listener) => listener.remove(),
+      )
+    }
+  }, [])
 
   useEffect(() => {
     window.scrollTo({
