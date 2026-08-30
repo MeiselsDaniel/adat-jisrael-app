@@ -10,6 +10,7 @@ import {
   Star,
   Trash2,
   Users,
+  Share2,
 } from 'lucide-react'
 import {
   useEffect,
@@ -233,6 +234,46 @@ function RichEventCard({
   const hasPrices =
     event.memberPrice !== undefined ||
     event.nonMemberPrice !== undefined
+
+  async function shareEvent() {
+    const shareUrl =
+      `https://app.adatjisrael.se/event/${event.id}`
+
+    const shareData = {
+      title: event.title,
+      text: `${event.title} – anmäl dig via Adat Jisrael`,
+      url: shareUrl,
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+        return
+      }
+
+      await navigator.clipboard.writeText(shareUrl)
+
+      window.alert(
+        'Länken till evenemanget har kopierats.',
+      )
+    } catch (error) {
+      if (
+        error instanceof DOMException &&
+        error.name === 'AbortError'
+      ) {
+        return
+      }
+
+      console.error(
+        'Kunde inte dela evenemanget:',
+        error,
+      )
+
+      window.alert(
+        'Evenemanget kunde inte delas.',
+      )
+    }
+  }
 
   function openRegistration() {
     setRegistrationError('')
@@ -928,6 +969,17 @@ function RichEventCard({
                 : 'platser kvar'}
             </p>
           )}
+
+        <button
+          type="button"
+          onClick={() => {
+            void shareEvent()
+          }}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[#183b70] ring-1 ring-slate-200"
+        >
+          <Share2 className="h-4 w-4" />
+          Dela evenemang
+        </button>
 
         {event.description ||
         hasPrices ||

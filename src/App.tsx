@@ -51,6 +51,24 @@ type AdminView =
   | 'documents'
   | 'newEvent'
 
+function getSharedEventId(
+  pathname: string,
+): string | null {
+  const match = pathname.match(
+    /^\/event\/([^/]+)\/?$/,
+  )
+
+  if (!match) {
+    return null
+  }
+
+  try {
+    return decodeURIComponent(match[1])
+  } catch {
+    return match[1]
+  }
+}
+
 function App() {
 useEffect(() => {
     if (Capacitor.getPlatform() !== 'ios') {
@@ -93,6 +111,13 @@ useEffect(() => {
   }, [firebaseUser])
 
   const [page, setPage] = useState<Page>('home')
+
+  const [sharedEventId] = useState<string | null>(
+    () =>
+      getSharedEventId(
+        window.location.pathname,
+      ),
+  )
   
 
   useEffect(() => {
@@ -128,6 +153,17 @@ const [adminOpen, setAdminOpen] = useState(false)
         : null,
     [profile],
   )
+
+  useEffect(() => {
+    if (
+      sharedEventId &&
+      currentUser?.status === 'approved'
+    ) {
+      setPage('calendar')
+      setAdminOpen(false)
+      setAdminView('dashboard')
+    }
+  }, [sharedEventId, currentUser?.status])
 
   useEffect(() => {
     if (!firebaseUser) {
@@ -545,7 +581,9 @@ const [adminOpen, setAdminOpen] = useState(false)
           )}
 
           {page === 'calendar' && (
-            <CalendarPage />
+            <CalendarPage
+              targetEventId={sharedEventId}
+            />
           )}
 
           {page === 'information' &&

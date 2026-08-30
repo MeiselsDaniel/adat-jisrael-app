@@ -59,7 +59,11 @@ type CalendarItem = {
 const standardTfilot =
   generateStandardTfilot(new Date(), 90)
 
-function CalendarPage() {
+function CalendarPage({
+  targetEventId,
+}: {
+  targetEventId?: string | null
+}) {
   const {
     firebaseUser,
     profile,
@@ -237,6 +241,18 @@ function CalendarPage() {
       (current) => current + 1,
     )
   }
+
+  useEffect(() => {
+    if (
+      targetEventId &&
+      events.some(
+        (event) =>
+          event.id === targetEventId,
+      )
+    ) {
+      setFilter('events')
+    }
+  }, [targetEventId, events])
 
   const filteredItems =
     items.filter((item) => {
@@ -437,6 +453,10 @@ function CalendarPage() {
                 <CalendarRow
                   key={item.id}
                   item={item}
+                  autoOpen={
+                    item.event?.id ===
+                    targetEventId
+                  }
                 />
               ))}
             </div>
@@ -876,11 +896,41 @@ function DateHeading({
 
 function CalendarRow({
   item,
+  autoOpen = false,
 }: {
   item: CalendarItem
+  autoOpen?: boolean
 }) {
   const [eventOpen, setEventOpen] =
     useState(false)
+
+  useEffect(() => {
+    if (
+      !autoOpen ||
+      !item.event
+    ) {
+      return
+    }
+
+    setEventOpen(true)
+
+    const timeout = window.setTimeout(
+      () => {
+        document
+          .getElementById(
+            `shared-event-${item.event?.id}`,
+          )
+          ?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          })
+      },
+      150,
+    )
+
+    return () =>
+      window.clearTimeout(timeout)
+  }, [autoOpen, item.event])
 
   const styles =
     getCategoryStyles(item.category)
@@ -890,7 +940,14 @@ function CalendarRow({
     item.event !== undefined
 
   return (
-    <div className="space-y-3">
+    <div
+      id={
+        item.event
+          ? `shared-event-${item.event.id}`
+          : undefined
+      }
+      className="space-y-3 scroll-mt-4"
+    >
       <article
         className={`rounded-2xl bg-white p-4 shadow-sm ring-1 ${styles.ring}`}
       >
