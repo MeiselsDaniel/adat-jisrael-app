@@ -1,4 +1,7 @@
+import { Capacitor } from '@capacitor/core'
+import { CapacitorCalendar } from '@ebarooni/capacitor-calendar'
 import {
+  CalendarPlus,
   BookOpen,
   CalendarDays,
   CheckCircle2,
@@ -234,6 +237,172 @@ function RichEventCard({
   const hasPrices =
     event.memberPrice !== undefined ||
     event.nonMemberPrice !== undefined
+
+  async function addEventToCalendar() {
+    const normalizeTime = (time: string) =>
+      time.replace('.', ':')
+
+    const parseLocalDate = (
+      date: string,
+      time: string,
+    ) => {
+      const [year, month, day] =
+        date.split('-').map(Number)
+
+      const [hours, minutes] =
+        normalizeTime(time)
+          .split(':')
+          .map(Number)
+
+      return new Date(
+        year,
+        month - 1,
+        day,
+        hours,
+        minutes,
+        0,
+        0,
+      )
+    }
+
+    const startDate = parseLocalDate(
+      event.startDate,
+      event.startTime,
+    )
+
+    const endDate = event.endTime
+      ? parseLocalDate(
+          event.startDate,
+          event.endTime,
+        )
+      : new Date(
+          startDate.getTime() +
+            60 * 60 * 1000,
+        )
+
+    const eventUrl =
+      `https://app.adatjisrael.se/event/${event.id}`
+
+    const description = [
+      event.description,
+      `Mer information: ${eventUrl}`,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await CapacitorCalendar.createEventWithPrompt({
+          title: event.title,
+          startDate: startDate.getTime(),
+          endDate: endDate.getTime(),
+          location: event.location ?? '',
+          description,
+          url: eventUrl,
+        })
+        return
+      } catch (error) {
+        console.error(
+          'Kunde inte öppna kalendern:',
+          error,
+        )
+
+        window.alert(
+          'Kalendern kunde inte öppnas.',
+        )
+        return
+      }
+    }
+
+    const toIcsDateTime = (date: Date) => {
+      const year = date.getFullYear()
+      const month = String(
+        date.getMonth() + 1,
+      ).padStart(2, '0')
+      const day = String(
+        date.getDate(),
+      ).padStart(2, '0')
+      const hours = String(
+        date.getHours(),
+      ).padStart(2, '0')
+      const minutes = String(
+        date.getMinutes(),
+      ).padStart(2, '0')
+
+      return (
+        `${year}${month}${day}` +
+        `T${hours}${minutes}00`
+      )
+    }
+
+    const escapeIcsText = (value: string) =>
+      value
+        .replace(/\\/g, '\\\\')
+        .replace(/\n/g, '\\n')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;')
+
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Adat Jisrael//Evenemang//SV',
+      'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `UID:${event.id}@adatjisrael.se`,
+      `DTSTART;TZID=Europe/Stockholm:${toIcsDateTime(
+        startDate,
+      )}`,
+      `DTEND;TZID=Europe/Stockholm:${toIcsDateTime(
+        endDate,
+      )}`,
+      `SUMMARY:${escapeIcsText(event.title)}`,
+      event.location
+        ? `LOCATION:${escapeIcsText(
+            event.location,
+          )}`
+        : null,
+      description
+        ? `DESCRIPTION:${escapeIcsText(
+            description,
+          )}`
+        : null,
+      `URL:${eventUrl}`,
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ]
+      .filter(Boolean)
+      .join('\r\n')
+
+    const blob = new Blob(
+      [ics],
+      {
+        type: 'text/calendar;charset=utf-8',
+      },
+    )
+
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download =
+      `${event.title
+        .toLowerCase()
+        .replace(
+          /[^a-z0-9åäö]+/gi,
+          '-',
+        )
+        .replace(/^-|-$/g, '') ||
+        'evenemang'}.ics`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    window.setTimeout(
+      () => URL.revokeObjectURL(url),
+      1000,
+    )
+  }
 
   async function shareEvent() {
     const shareUrl =
@@ -970,16 +1139,29 @@ function RichEventCard({
             </p>
           )}
 
-        <button
-          type="button"
-          onClick={() => {
-            void shareEvent()
-          }}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[#183b70] ring-1 ring-slate-200"
-        >
-          <Share2 className="h-4 w-4" />
-          Dela evenemang
-        </button>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void addEventToCalendar()
+            }}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-bold text-[#183b70] ring-1 ring-slate-200"
+          >
+            <CalendarPlus className="h-4 w-4 shrink-0" />
+            <span>Lägg till i kalender</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void shareEvent()
+            }}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-bold text-[#183b70] ring-1 ring-slate-200"
+          >
+            <Share2 className="h-4 w-4 shrink-0" />
+            <span>Dela evenemang</span>
+          </button>
+        </div>
 
         {event.description ||
         hasPrices ||
