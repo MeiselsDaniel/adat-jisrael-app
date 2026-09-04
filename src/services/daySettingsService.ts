@@ -31,6 +31,8 @@ export type DaySettings = {
   moreInformation?: string
   customCandleLightingTime?: string
   customHavdalaTime?: string
+  customMinchaTime?: string
+  customMinchaLabel?: string
 
   showCandleLighting?: boolean
   showHavdala?: boolean
@@ -52,6 +54,8 @@ export type SaveDaySettingsInput = {
 
   customCandleLightingTime?: string
   customHavdalaTime?: string
+  customMinchaTime?: string
+  customMinchaLabel?: string
 
   showCandleLighting: boolean
   showHavdala: boolean
@@ -77,6 +81,8 @@ export async function saveDaySettings({
   moreInformation,
   customCandleLightingTime,
   customHavdalaTime,
+  customMinchaTime,
+  customMinchaLabel,
   showCandleLighting,
   showHavdala,
   showMincha,
@@ -117,6 +123,16 @@ export async function saveDaySettings({
       customHavdalaTime:
         normalizeOptionalTime(
           customHavdalaTime,
+        ),
+
+      customMinchaTime:
+        normalizeOptionalTime(
+          customMinchaTime,
+        ),
+
+      customMinchaLabel:
+        normalizeOptionalText(
+          customMinchaLabel,
         ),
 
       showCandleLighting,

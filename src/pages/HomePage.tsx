@@ -1,17 +1,11 @@
 import {
-  BookOpen,
-  Clock,
   Heart,
-  Mic2,
   Star,
-  Utensils,
-  Wine,
 } from 'lucide-react'
 import {
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from 'react'
 import LiveMinyanCard from '../components/LiveMinyanCard'
 import RichEventCard from '../components/RichEventCard'
@@ -30,6 +24,7 @@ import {
   subscribeToKiddushDate,
   type KiddushBooking,
 } from '../services/kiddushService'
+import { subscribeToHavdalaTime } from '../services/havdalaTimesService'
 import {
   subscribeToTfilotBetween,
   type TefilaRecord,
@@ -38,10 +33,8 @@ import {
   subscribeToEventsBetween,
   type StoredAppEvent,
 } from '../services/eventService'
-import {
-  todayProgram,
-  type ProgramItem,
-} from '../data/todayProgram'
+import ProgramCardView from '../components/ProgramCardView'
+import { buildProgramCardData } from '../utils/buildProgramCardData'
 import type { Tefila } from '../types'
 import { generateStandardTfilot } from '../utils/generateStandardTfilot'
 import { getDefaultSermon } from '../utils/getDefaultSermon'
@@ -722,11 +715,58 @@ function HomeTefilaCard({
   jahrzeits,
 }: HomeTefilaCardProps) {
   const isShacharit =
+    tefila.firestoreId?.endsWith(
+      '-shacharit',
+    ) ||
+    String(tefila.id).endsWith(
+      '-shacharit',
+    ) ||
     tefila.title
       .toLowerCase()
       .includes(
         'shacharit',
       )
+
+  const tefilaDateValue =
+    tefila.dateValue ?? ''
+
+  const [daySettings, setDaySettings] =
+    useState<DaySettings | null>(null)
+
+  useEffect(() => {
+    if (!tefilaDateValue) {
+      setDaySettings(null)
+      return
+    }
+
+    return subscribeToDaySettings(
+      tefilaDateValue,
+      setDaySettings,
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa dagsinställningar för minjankort:',
+          caughtError,
+        )
+        setDaySettings(null)
+      },
+    )
+  }, [tefilaDateValue])
+
+  const isHolidayShacharit =
+    isShacharit &&
+    Boolean(tefilaDateValue) &&
+    (
+      daySettings?.dayType === 'holiday' ||
+      daySettings?.dayType === 'shabbatHoliday'
+    )
+
+  if (isHolidayShacharit) {
+    return (
+      <ProgramCard
+        dateValue={tefilaDateValue}
+      />
+    )
+  }
 
   const relevantJahrzeits =
     isShacharit
@@ -863,17 +903,17 @@ type ProgramCardProps = {
 function ProgramCard({
   dateValue,
 }: ProgramCardProps) {
-  const cardSaturdayDateValue =
+  const cardDateValue =
     dateValue
 
-  const cardSaturday =
+  const cardDate =
     new Date(
-      `${cardSaturdayDateValue}T12:00:00`,
+      `${cardDateValue}T12:00:00`,
     )
 
-  const shabbatHebcalInfo =
+  const cardHebcalInfo =
     getHebcalDayInfo(
-      cardSaturdayDateValue,
+      cardDateValue,
     )
 
   const [daySettings, setDaySettings] =
@@ -882,9 +922,14 @@ function ProgramCard({
   const [kiddush, setKiddush] =
     useState<KiddushBooking | null>(null)
 
+  const [
+    registeredHavdalaTime,
+    setRegisteredHavdalaTime,
+  ] = useState<string | null>(null)
+
   useEffect(() => {
     return subscribeToDaySettings(
-      cardSaturdayDateValue,
+      cardDateValue,
       setDaySettings,
       (error) => {
         /*
@@ -899,11 +944,11 @@ function ProgramCard({
         setDaySettings(null)
       },
     )
-  }, [cardSaturdayDateValue])
+  }, [cardDateValue])
 
   useEffect(() => {
     return subscribeToKiddushDate(
-      cardSaturdayDateValue,
+      cardDateValue,
       setKiddush,
       (error) => {
         console.error(
@@ -914,68 +959,22 @@ function ProgramCard({
         setKiddush(null)
       },
     )
-  }, [cardSaturdayDateValue])
+  }, [cardDateValue])
 
-    const specialShabbatNames = [
-      'Shabbat Shuva',
-      'Shabbat Shekalim',
-      'Shabbat Zachor',
-      'Shabbat Parah',
-      'Shabbat HaChodesh',
-      'Shabbat HaGadol',
-      'Shabbat Chazon',
-      'Shabbat Nachamu',
-    ]
+  useEffect(() => {
+    return subscribeToHavdalaTime(
+      cardDateValue,
+      setRegisteredHavdalaTime,
+      (error) => {
+        console.error(
+          'Kunde inte läsa registrerad Havdala-tid på startsidan:',
+          error,
+        )
 
-    const specialShabbatNotices =
-      shabbatHebcalInfo.holidayNames.filter(
-        (name) =>
-          specialShabbatNames.includes(name),
-      )
-
-    const actualHolidayNames =
-      shabbatHebcalInfo.holidayNames.filter(
-        (name) =>
-          !specialShabbatNames.includes(name) &&
-          name !== 'Leil Selichot',
-      )
-
-    const isHoliday =
-      daySettings?.dayType === 'holiday' ||
-      daySettings?.dayType === 'shabbatHoliday' ||
-      daySettings?.dayType === 'erevShabbatHoliday' ||
-      daySettings?.dayType ===
-        'erevShabbatErevHoliday' ||
-      actualHolidayNames.length > 0
-
-    const customHolidayName =
-      daySettings?.holidayName?.trim()
-
-    const baseDisplayTitle =
-      customHolidayName ||
-      actualHolidayNames[0] ||
-      shabbatHebcalInfo.parasha ||
-      todayProgram.title
-
-    const shabbatNotices = [
-      ...specialShabbatNotices,
-      shabbatHebcalInfo.isShabbatMevarchim
-        ? 'Shabbat Mevarchim'
-        : null,
-      shabbatHebcalInfo.roshChodeshName,
-    ].filter(Boolean)
-
-  const displayTitle =
-    [
-      baseDisplayTitle,
-      ...shabbatNotices,
-    ].join(' · ')
-
-  const displayDate =
-    `Lördag ${formatSwedishDate(cardSaturday)}`
-
-  const hebrewDate =
-    shabbatHebcalInfo.hebrewDate
+        setRegisteredHavdalaTime(null)
+      },
+    )
+  }, [cardDateValue])
 
   const showHavdala =
     daySettings?.showHavdala ?? true
@@ -985,26 +984,27 @@ function ProgramCard({
 
   const havdalaTime =
     daySettings?.customHavdalaTime?.trim() ||
-    shabbatHebcalInfo.havdalaTime
-
+    registeredHavdalaTime ||
+    cardHebcalInfo.havdalaTime
 
   const minchaGedolaTime =
-    getMinchaGedolaTime(cardSaturday)
+    getMinchaGedolaTime(cardDate)
+
+  const customMinchaTime =
+    daySettings?.customMinchaTime?.trim()
+
+  const customMinchaLabel =
+    daySettings?.customMinchaLabel?.trim()
+
+  const useZmanForMincha =
+    cardHebcalInfo.isShabbat
 
   const manualSermon =
     daySettings?.sermon?.trim()
 
   const sermon =
     manualSermon ||
-    getDefaultSermon(
-      cardSaturdayDateValue,
-    )
-
-  const comment =
-    daySettings?.comment?.trim()
-
-  const moreInformation =
-    daySettings?.moreInformation?.trim()
+    getDefaultSermon(cardDateValue)
 
   const showKiddush =
     kiddush?.status !== 'blocked'
@@ -1019,288 +1019,52 @@ function ProgramCard({
       ? kiddush.dedication?.trim()
       : undefined
 
-  /*
-   * Bygg först de vanliga programraderna.
-   * Därefter sätter vi ordningen explicit:
-   *
-   * Shacharit → Predikan → Kiddush →
-   * Mincha → Havdala
-   */
-  const baseProgram =
-    todayProgram.program.flatMap(
-      (item): ProgramItem[] => {
-        if (
-          item.id === 'mincha' &&
-          !showMincha
-        ) {
-          return []
-        }
-
-        if (item.id === 'havdala') {
-          if (!showHavdala) {
-            return []
-          }
-
-          return [
-            {
-              ...item,
-              value:
-                havdalaTime ||
-                item.value,
-            },
-          ]
-        }
-
-        if (
-          item.id === 'sermon' ||
-          item.label
-            .toLowerCase()
-            .includes('predikan')
-        ) {
-          if (!sermon) {
-            return []
-          }
-
-          return [
-            {
-              ...item,
-              value: sermon,
-            },
-          ]
-        }
-
-        return [item]
+  const cardData =
+    buildProgramCardData({
+      dateValue: cardDateValue,
+      hebcalInfo: cardHebcalInfo,
+      daySettings,
+      sermon,
+      havdalaTime:
+        showHavdala
+          ? havdalaTime
+          : null,
+      minchaTime:
+        showMincha
+          ? (
+              customMinchaTime ||
+              (
+                useZmanForMincha
+                  ? minchaGedolaTime
+                  : undefined
+              )
+            )
+          : null,
+      minchaLabel:
+        customMinchaLabel ||
+        undefined,
+      kiddush: {
+        show: showKiddush,
+        sponsor: kiddushSponsor,
+        dedication: kiddushDedication,
+        dedicationType: kiddush?.dedicationType,
       },
-    )
-
-  const findProgramItem = (
-    id: string,
-    label: string,
-  ) =>
-    baseProgram.find(
-      (item) =>
-        item.id === id ||
-        item.label
-          .toLowerCase()
-          .includes(label),
-    )
-
-  const shacharitItem =
-    findProgramItem(
-      'shacharit',
-      'shacharit',
-    )
-
-  const sermonProgramItem =
-    baseProgram.find(
-      (item) =>
-        item.id === 'sermon' ||
-        item.label
-          .toLowerCase()
-          .includes('predikan'),
-    )
-
-  const minchaSource =
-    findProgramItem(
-      'mincha',
-      'mincha',
-    )
-
-  const minchaItem: ProgramItem | undefined =
-    minchaSource
-      ? {
-          ...minchaSource,
-          value:
-            minchaGedolaTime ||
-            minchaSource.value,
-        }
-      : undefined
-
-  const havdalaItem =
-    findProgramItem(
-      'havdala',
-      'havdala',
-    )
-
-  const kiddushProgramItem: ProgramItem | null =
-    showKiddush
-      ? {
-          id: 'firebase-kiddush',
-          label: 'Kiddush',
-          value: kiddushSponsor
-            ? kiddushDedication
-              ? `${kiddushSponsor} bjuder på Kiddush. ${formatKiddushDedication(
-                  kiddushDedication,
-                  kiddush?.dedicationType,
-                )}`
-              : `${kiddushSponsor} bjuder på Kiddush.`
-            : 'Adat Jisrael bjuder på Kiddush.',
-          icon: 'wine',
-        }
-      : null
-
-  const displayProgram: ProgramItem[] = [
-    shacharitItem,
-    sermonProgramItem,
-    kiddushProgramItem,
-    minchaItem,
-    havdalaItem,
-  ].filter(
-    (item): item is ProgramItem =>
-      item !== undefined &&
-      item !== null,
-  )
-
-
-  const accentColor = isHoliday
-    ? 'bg-amber-700'
-    : 'bg-[#68123f]'
-
-  const accentTextColor = isHoliday
-    ? 'text-amber-800'
-    : 'text-[#68123f]'
-
-  const accentBackground = isHoliday
-    ? 'bg-amber-100'
-    : 'bg-rose-100'
+    })
 
   return (
-    <article
-      className={`overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ${
-        isHoliday
-          ? 'ring-amber-700/25'
-          : 'ring-[#68123f]/25'
-      }`}
-    >
-      <div className={`${accentColor} px-5 py-3 text-white`}>
-        <div className="flex items-center gap-2">
-          {isHoliday && (
-            <Star className="h-5 w-5" />
-          )}
-
-          <p className="text-sm font-bold uppercase tracking-wide">
-            {isHoliday
-              ? 'Högtid'
-              : 'Shabbat'}
-          </p>
-        </div>
-      </div>
-
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p
-              className={`text-sm font-semibold ${accentTextColor}`}
-            >
-              {displayDate}
-            </p>
-
-            <h2 className="mt-1 text-2xl font-bold text-[#183b70]">
-              {displayTitle}
-            </h2>
-
-            {hebrewDate && (
-              <p className="mt-1 text-sm font-semibold text-slate-500">
-                {hebrewDate}
-              </p>
-            )}
-          </div>
-
-          {isHoliday && (
-            <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${accentBackground} ${accentTextColor}`}
-            >
-              <Star className="h-6 w-6" />
-            </div>
-          )}
-        </div>
-
-        <div className="mt-5 divide-y divide-slate-100">
-          {displayProgram.map((item) => (
-            <ProgramDetail
-              key={item.id}
-              item={item}
-            />
-          ))}
-        </div>
-
-        {comment && (
-          <div className="mt-5 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
-            {comment}
-          </div>
-        )}
-
-        {moreInformation && (
-          <div className="mt-5 rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#183b70]">
-              Mer information
-            </p>
-
-            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
-              {moreInformation}
-            </p>
-          </div>
-        )}
-
-      </div>
-    </article>
+    <ProgramCardView
+      isHoliday={cardData.isHoliday}
+      headerLabel={cardData.headerLabel}
+      displayDate={cardData.displayDate}
+      displayTitle={cardData.displayTitle}
+      hebrewDate={cardData.hebrewDate}
+      program={cardData.program}
+      comment={cardData.comment}
+      moreInformation={cardData.moreInformation}
+    />
   )
 }
 
-type ProgramDetailProps = {
-  item: ProgramItem
-}
-
-function ProgramDetail({
-  item,
-}: ProgramDetailProps) {
-  return (
-    <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[#183b70]">
-        {getProgramIcon(item.icon)}
-      </div>
-
-      <div className="flex-1">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-          {item.label}
-        </p>
-
-        <p className="mt-0.5 font-semibold text-slate-800">
-          {item.value}
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function getProgramIcon(
-  icon: ProgramItem['icon'],
-): ReactNode {
-  const iconClassName = 'h-5 w-5'
-
-  switch (icon) {
-    case 'book':
-      return <BookOpen className={iconClassName} />
-
-    case 'clock':
-      return <Clock className={iconClassName} />
-
-    case 'mic':
-      return <Mic2 className={iconClassName} />
-
-    case 'wine':
-      return <Wine className={iconClassName} />
-
-    case 'food':
-      return <Utensils className={iconClassName} />
-
-    case 'moon':
-      return <Clock className={iconClassName} />
-
-    default:
-      return <Star className={iconClassName} />
-  }
-}
 
 function SupportSection() {
   async function handleSwish() {
@@ -1590,33 +1354,6 @@ function formatSwedishDate(
   }).format(date)
 }
 
-function formatKiddushDedication(
-  dedication: string,
-  type?: KiddushBooking['dedicationType'],
-): string {
-  const clean = dedication
-    .trim()
-    .replace(/[.!?]+$/, '')
-
-  if (type === 'memory') {
-    return `Till minne av ${clean}.`
-  }
-
-  if (type === 'celebration') {
-    return `För att fira ${clean}.`
-  }
-
-  if (type === 'custom') {
-    return `${clean}.`
-  }
-
-  if (type === 'occasion') {
-    return `Med anledning av ${clean}.`
-  }
-
-  // Gamla bokningar saknar typ.
-  return `${clean}.`
-}
 
 export default HomePage
 

@@ -38,6 +38,22 @@ function InformationPage({
   const [posts, setPosts] =
     useState<NewsPost[]>([])
 
+  const [showArchive, setShowArchive] =
+    useState(false)
+
+  const visiblePosts =
+    showArchive
+      ? posts
+      : posts.slice(0, 10)
+
+  const hasArchivedPosts =
+    posts.length > 10
+
+  const featuredPostId =
+    posts.find(
+      (post) => !post.isPinned,
+    )?.id
+
   const [readNewsIds, setReadNewsIds] =
     useState<Set<string>>(
       () => new Set(),
@@ -169,11 +185,14 @@ function InformationPage({
         </section>
       ) : posts.length > 0 ? (
         <section className="space-y-3">
-          {posts.map((post) => (
+          {visiblePosts.map((post) => (
             <NewsCard
               key={post.id}
               post={post}
               fundraiser={fundraiser}
+              featured={
+                post.id === featuredPostId
+              }
                 isRead={
                 readNewsIds.has(
                   post.id,
@@ -235,6 +254,22 @@ function InformationPage({
               }}
             />
           ))}
+
+          {hasArchivedPosts && (
+            <button
+              type="button"
+              onClick={() =>
+                setShowArchive(
+                  (current) => !current,
+                )
+              }
+              className="mt-2 w-full rounded-2xl bg-white px-4 py-4 text-sm font-bold text-[#183b70] shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
+            >
+              {showArchive
+                ? 'Dölj äldre nyheter'
+                : `Visa äldre nyheter (${posts.length - 10})`}
+            </button>
+          )}
         </section>
       ) : (
         <section className="rounded-3xl bg-white p-7 text-center shadow-sm ring-1 ring-slate-200">
@@ -259,6 +294,7 @@ function InformationPage({
 type NewsCardProps = {
   post: NewsPost
   fundraiser: Fundraiser | null
+  featured: boolean
   isRead: boolean
   onRead: () => void
 }
@@ -266,6 +302,7 @@ type NewsCardProps = {
 function NewsCard({
   post,
   fundraiser,
+  featured,
   isRead,
   onRead,
 }: NewsCardProps) {
@@ -307,12 +344,22 @@ return (
         <img
           src={post.imageUrl}
           alt=""
-          className="h-44 w-full object-cover"
+          className={
+            featured
+              ? "h-56 w-full object-cover"
+              : "h-44 w-full object-cover"
+          }
         />
       )}
 
       <div className="p-5">
         <div className="flex items-center gap-2">
+          {featured && (
+            <span className="rounded-full bg-[#183b70] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              Senaste nytt
+            </span>
+          )}
+
           {post.isPinned && (
             <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
               <Pin className="h-3 w-3" />
@@ -333,11 +380,23 @@ return (
           )}
         </div>
 
-        <h2 className="mt-3 text-lg font-bold text-slate-900">
+        <h2
+          className={
+            featured
+              ? "mt-3 text-2xl font-bold leading-tight text-slate-900"
+              : "mt-3 text-lg font-bold text-slate-900"
+          }
+        >
           {post.title}
         </h2>
 
-        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-500">
+        <p
+          className={
+            featured
+              ? "mt-3 whitespace-pre-line text-base leading-7 text-slate-600"
+              : "mt-2 whitespace-pre-line text-sm leading-6 text-slate-500"
+          }
+        >
           {post.excerpt}
         </p>
 

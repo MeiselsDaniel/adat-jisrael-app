@@ -27,7 +27,8 @@ const greetings = [
   'Nu vill jag se leverans! 😁',
   'Välkommen till Adat Jisrael.',
   'En kaffe efter Shacharit? ☕',
-  'Am Yisrael Chai! ✡️',
+  'עם ישראל חי 🇮🇱',
+  'זה בית כנסת או מסעדה?',
 ]
 
 function Header({
@@ -55,22 +56,11 @@ function Header({
    * Samma hälsning hela dagen.
    * Byts automatiskt nästa kalenderdag.
    */
-  const startOfYear = new Date(
-    today.getFullYear(),
-    0,
-    1,
-  )
-
-  const dayOfYear = Math.floor(
-    (
-      today.getTime() -
-      startOfYear.getTime()
-    ) / 86400000,
-  )
-
   const greeting =
     greetings[
-      dayOfYear % greetings.length
+      Math.floor(
+        Math.random() * greetings.length,
+      )
     ]
 
   const hebrewDate =
@@ -108,8 +98,14 @@ function Header({
             </p>
 
             <p className="mt-1 text-xs font-medium text-slate-500">
-              {greeting}
-            </p>
+            {/[֐-׿]/.test(greeting) ? (
+              <bdi dir="rtl" lang="he">
+                {greeting}
+              </bdi>
+            ) : (
+              greeting
+            )}
+          </p>
           </div>
 
           <div className="shrink-0 text-right">

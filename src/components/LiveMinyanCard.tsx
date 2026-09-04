@@ -153,8 +153,22 @@ function LiveMinyanCard({
     daySettings?.dayType === 'holiday' ||
     daySettings?.dayType === 'shabbatHoliday'
 
+  const isErevShabbatErevHoliday =
+    daySettings?.dayType ===
+    'erevShabbatErevHoliday'
+
+  const isShacharitForErevStyling =
+    displayedTefila.title
+      .toLowerCase()
+      .includes('shacharit')
+
+  const applyErevShabbatErevHolidayStyling =
+    isErevShabbatErevHoliday &&
+    !isShacharitForErevStyling
+
   const effectiveHolidayKind =
-    tefila.kind === 'erevHoliday'
+    tefila.kind === 'erevHoliday' ||
+    applyErevShabbatErevHolidayStyling
       ? 'erevHoliday'
       : tefila.kind === 'holiday' ||
           dayIsHoliday
@@ -166,18 +180,88 @@ function LiveMinyanCard({
     hebcalInfo?.holidayNames?.[0] ||
     ''
 
-  const calculatedHolidayLabel =
-    effectiveHolidayKind === 'erevHoliday'
+  const erevHolidayName =
+    rawHolidayName
+      .toLowerCase()
+      .startsWith('erev ')
       ? rawHolidayName
-          .toLowerCase()
-          .startsWith('erev ')
-        ? rawHolidayName
-        : rawHolidayName
-          ? `Erev ${rawHolidayName}`
-          : 'Erev högtid'
-      : effectiveHolidayKind === 'holiday'
-        ? rawHolidayName || 'Högtid'
-        : undefined
+      : rawHolidayName
+        ? `Erev ${rawHolidayName}`
+        : 'Erev högtid'
+
+  const calculatedHolidayLabel =
+    applyErevShabbatErevHolidayStyling
+      ? `Erev Shabbat · ${erevHolidayName}`
+      : effectiveHolidayKind === 'erevHoliday'
+        ? erevHolidayName
+        : effectiveHolidayKind === 'holiday'
+          ? rawHolidayName || 'Högtid'
+          : undefined
+
+  const hebcalHolidayNames =
+    hebcalInfo?.holidayNames ?? []
+
+  const cholHamoedHoliday =
+    hebcalHolidayNames.find((name) => {
+      const normalized =
+        name.toLowerCase()
+
+      return (
+        normalized.includes('chol hamoed') ||
+        normalized.includes("ch''m") ||
+        normalized.includes('ch”m') ||
+        normalized.includes('ch\"m')
+      )
+    })
+
+  const chanukahHoliday =
+    hebcalHolidayNames.find((name) => {
+      const normalized =
+        name.toLowerCase()
+
+      return (
+        normalized.includes('chanukah') ||
+        normalized.includes('hanukkah')
+      )
+    })
+
+  const fastHoliday =
+    hebcalHolidayNames.find((name) => {
+      const normalized =
+        name.toLowerCase()
+
+      return (
+        normalized.includes('tzom gedalia') ||
+        normalized.includes('gedaliah') ||
+        normalized.includes("asara b'tevet") ||
+        normalized.includes('asara b’tevet') ||
+        normalized.includes("ta'anit esther") ||
+        normalized.includes('ta’anit esther') ||
+        normalized.includes('tzom tammuz') ||
+        normalized.includes("tisha b'av") ||
+        normalized.includes('tisha b’av')
+      )
+    })
+
+  const minorDayLabel =
+    effectiveHolidayKind !== 'holiday' &&
+    effectiveHolidayKind !== 'erevHoliday'
+      ? cholHamoedHoliday
+        ? cholHamoedHoliday
+            .toLowerCase()
+            .includes('pesach')
+          ? 'Chol Hamoed · Pesach'
+          : 'Chol Hamoed · Sukkot'
+        : chanukahHoliday
+          ? 'Chanukka'
+          : fastHoliday
+            ? `Fastedag · ${
+                fastHoliday
+                  .replace(/^Fast of /i, '')
+                  .replace(/h$/, '')
+              }`
+            : undefined
+      : undefined
 
   const holidayExtraInfo =
     effectiveHolidayKind === 'erevHoliday' &&
@@ -296,6 +380,30 @@ function LiveMinyanCard({
       10 - attendance,
     )
 
+  const isStandardShacharit =
+    tefila.firestoreId?.endsWith(
+      '-shacharit',
+    ) ||
+    String(tefila.id).endsWith(
+      '-shacharit',
+    ) ||
+    displayedTefila.title
+      .toLowerCase()
+      .includes('shacharit')
+
+  const hideStandardShacharitInAdmin =
+    showAdminControls &&
+    isStandardShacharit &&
+    (
+      daySettings?.dayType === 'holiday' ||
+      daySettings?.dayType === 'shabbat' ||
+      daySettings?.dayType === 'shabbatHoliday'
+    )
+
+  if (hideStandardShacharitInAdmin) {
+    return null
+  }
+
   return (
     <>
       <MinyanCard
@@ -330,7 +438,8 @@ function LiveMinyanCard({
       extraInfo={displayedExtraInfo}
       holidayLabel={
         holidayLabel ??
-        calculatedHolidayLabel
+        calculatedHolidayLabel ??
+        minorDayLabel
       }
       sermon={
         tefila.title

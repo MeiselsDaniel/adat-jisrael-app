@@ -8,23 +8,20 @@ import {
 import { useAuth } from '../hooks/useAuth'
 import { getHebcalDayInfo } from '../services/hebcalService'
 import { getDefaultSermon } from '../utils/getDefaultSermon'
+import { getMinchaGedolaTime } from '../utils/getMinchaGedolaTime'
+import ProgramCardView from './ProgramCardView'
+import { buildProgramCardData } from '../utils/buildProgramCardData'
+import {
+  subscribeToKiddushDate,
+  type KiddushBooking,
+} from '../services/kiddushService'
+import { subscribeToHavdalaTime } from '../services/havdalaTimesService'
 import {
   saveDaySettings,
   subscribeToDaySettings,
   type DayType,
 } from '../services/daySettingsService'
 
-function ensureErevHolidayName(
-  name: string,
-): string {
-  const trimmed = name.trim()
-
-  return trimmed
-    .toLowerCase()
-    .startsWith('erev ')
-    ? trimmed
-    : `Erev ${trimmed}`
-}
 
 
 type DaySettingsEditorProps = {
@@ -47,6 +44,14 @@ function DaySettingsEditor({
     getDefaultSermon(dateValue)
 
   const [open, setOpen] = useState(false)
+
+  const [kiddush, setKiddush] =
+    useState<KiddushBooking | null>(null)
+
+  const [
+    registeredHavdalaTime,
+    setRegisteredHavdalaTime,
+  ] = useState<string | null>(null)
   const [dayType, setDayType] =
     useState<DayType>(defaultDayType)
 
@@ -72,6 +77,16 @@ function DaySettingsEditor({
   const [
     customHavdalaTime,
     setCustomHavdalaTime,
+  ] = useState('')
+
+  const [
+    customMinchaTime,
+    setCustomMinchaTime,
+  ] = useState('')
+
+  const [
+    customMinchaLabel,
+    setCustomMinchaLabel,
   ] = useState('')
 
   const [
@@ -102,10 +117,11 @@ function DaySettingsEditor({
     return subscribeToDaySettings(
       dateValue,
       (settings) => {
-        setDayType(
+        const resolvedDayType =
           settings?.dayType ??
-            getDefaultDayType(dateValue),
-        )
+          getDefaultDayType(dateValue)
+
+        setDayType(resolvedDayType)
 
         setHolidayName(
           settings?.holidayName ?? '',
@@ -134,6 +150,16 @@ function DaySettingsEditor({
             '',
         )
 
+        setCustomMinchaTime(
+          settings?.customMinchaTime ??
+            '',
+        )
+
+        setCustomMinchaLabel(
+          settings?.customMinchaLabel ??
+            '',
+        )
+
         setShowCandleLighting(
           settings?.showCandleLighting ??
             true,
@@ -146,7 +172,7 @@ function DaySettingsEditor({
 
         setShowMincha(
           settings?.showMincha ??
-            true,
+            resolvedDayType === 'shabbat',
         )
       },
       (caughtError) => {
@@ -155,6 +181,36 @@ function DaySettingsEditor({
         setError(
           'Dagsinställningarna kunde inte hämtas.',
         )
+      },
+    )
+  }, [dateValue])
+
+  useEffect(() => {
+    return subscribeToKiddushDate(
+      dateValue,
+      setKiddush,
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa Kiddush i förhandsvisningen:',
+          caughtError,
+        )
+
+        setKiddush(null)
+      },
+    )
+  }, [dateValue])
+
+  useEffect(() => {
+    return subscribeToHavdalaTime(
+      dateValue,
+      setRegisteredHavdalaTime,
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa registrerad Havdala-tid i förhandsvisningen:',
+          caughtError,
+        )
+
+        setRegisteredHavdalaTime(null)
       },
     )
   }, [dateValue])
@@ -178,6 +234,8 @@ function DaySettingsEditor({
         moreInformation,
         customCandleLightingTime,
         customHavdalaTime,
+        customMinchaTime,
+        customMinchaLabel,
         showCandleLighting,
         showHavdala,
         showMincha,
@@ -212,65 +270,101 @@ function DaySettingsEditor({
     hebcalInfo.isShabbat ||
     hebcalInfo.isErevShabbat
 
-  const previewHolidayName =
-    holidayName.trim() ||
-    hebcalInfo.holidayNames[0] ||
-    ''
+  const previewSermon =
+    sermon.trim() ||
+    defaultSermon
 
-  const previewTopLabel = (() => {
-    switch (dayType) {
-      case 'shabbatHoliday':
-        return previewHolidayName
-          ? `${previewHolidayName} · Shabbat`
-          : 'Shabbat'
+  const previewHavdalaTime =
+    customHavdalaTime.trim() ||
+    registeredHavdalaTime ||
+    hebcalInfo.havdalaTime
 
-      case 'erevShabbatHoliday':
-        return previewHolidayName
-          ? `${previewHolidayName} · Erev Shabbat`
-          : 'Erev Shabbat'
+  const previewDate =
+    new Date(`${dateValue}T12:00:00`)
 
-      case 'erevShabbatErevHoliday':
-        return previewHolidayName
-          ? `${ensureErevHolidayName(previewHolidayName)} · Erev Shabbat`
-          : 'Erev Shabbat'
+  const previewUsesAutomaticMincha =
+    dayType === 'shabbat' ||
+    dayType === 'shabbatHoliday' ||
+    hebcalInfo.isShabbat
 
-      case 'holiday':
-        return previewHolidayName || 'Högtid'
+  const previewMinchaTime =
+    customMinchaTime.trim() ||
+    (
+      previewUsesAutomaticMincha
+        ? getMinchaGedolaTime(previewDate)
+        : ''
+    )
 
-      case 'shabbat':
-        return 'Shabbat'
+  const previewDaySettings = {
+    id: dateValue,
+    date: dateValue,
+    dayType,
+    holidayName:
+      holidayName.trim() ||
+      undefined,
+    sermon:
+      sermon.trim() ||
+      undefined,
+    comment:
+      comment.trim() ||
+      undefined,
+    moreInformation:
+      moreInformation.trim() ||
+      undefined,
+    customCandleLightingTime:
+      customCandleLightingTime.trim() ||
+      undefined,
+    customHavdalaTime:
+      customHavdalaTime.trim() ||
+      undefined,
+    customMinchaTime:
+      customMinchaTime.trim() ||
+      undefined,
+    customMinchaLabel:
+      customMinchaLabel.trim() ||
+      undefined,
+    showCandleLighting,
+    showHavdala,
+    showMincha,
+  }
 
-      default:
-        if (hebcalInfo.isErevShabbat) {
-          return 'Erev Shabbat'
-        }
+  const previewShowKiddush =
+    kiddush?.status !== 'blocked'
 
-        if (hebcalInfo.isShabbat) {
-          return 'Shabbat'
-        }
+  const previewKiddushSponsor =
+    kiddush?.status === 'approved'
+      ? kiddush.sponsor?.trim()
+      : undefined
 
-        return 'Vanlig dag'
-    }
-  })()
+  const previewKiddushDedication =
+    kiddush?.status === 'approved'
+      ? kiddush.dedication?.trim()
+      : undefined
 
-  const previewTitle =
-    holidayName.trim() ||
-    hebcalInfo.holidayNames[0] ||
-    previewTopLabel
-
-  const previewAccent =
-    previewIsHoliday
-      ? 'bg-amber-700'
-      : previewIsShabbat
-        ? 'bg-[#68123f]'
-        : 'bg-[#183b70]'
-
-  const previewRing =
-    previewIsHoliday
-      ? 'ring-amber-700/25'
-      : previewIsShabbat
-        ? 'ring-[#68123f]/25'
-        : 'ring-slate-200'
+  const previewCardData =
+    buildProgramCardData({
+      dateValue,
+      hebcalInfo,
+      daySettings: previewDaySettings,
+      sermon: previewSermon,
+      havdalaTime:
+        showHavdala
+          ? previewHavdalaTime
+          : null,
+      minchaTime:
+        showMincha
+          ? previewMinchaTime
+          : null,
+      minchaLabel:
+        customMinchaLabel.trim() ||
+        undefined,
+      kiddush: {
+        show: previewShowKiddush,
+        sponsor: previewKiddushSponsor,
+        dedication: previewKiddushDedication,
+        dedicationType: kiddush?.dedicationType,
+      },
+    })
 
   return (
     <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
@@ -322,14 +416,10 @@ function DaySettingsEditor({
               )}
 
             {showHavdala &&
-              (
-                customHavdalaTime ||
-                hebcalInfo.havdalaTime
-              ) && (
+              previewHavdalaTime && (
                 <span>
                   Havdala{' '}
-                  {customHavdalaTime ||
-                    hebcalInfo.havdalaTime}
+                  {previewHavdalaTime}
                 </span>
               )}
           </div>
@@ -476,97 +566,22 @@ function DaySettingsEditor({
                   Förhandsvisning i appen
                 </p>
 
-                <article
-                  className={`overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ${previewRing}`}
-                >
-                  <div
-                    className={`${previewAccent} px-5 py-3 text-white`}
-                  >
-                    <p className="text-sm font-bold uppercase tracking-wide">
-                      {previewTopLabel}
-                    </p>
-                  </div>
-
-                  <div className="p-5">
-                    <p className="text-sm font-semibold text-slate-500">
-                      {dateValue}
-                    </p>
-
-                    <h3 className="mt-1 text-xl font-bold text-[#183b70]">
-                      {previewTitle}
-                    </h3>
-
-                    {hebcalInfo.hebrewDate && (
-                      <p className="mt-1 text-sm font-semibold text-slate-500">
-                        {hebcalInfo.hebrewDate}
-                      </p>
-                    )}
-
-                    {showCandleLighting &&
-                      (
-                        customCandleLightingTime ||
-                        hebcalInfo.candleLightingTime
-                      ) && (
-                        <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
-                          <span className="text-sm font-semibold text-slate-500">
-                            Ljuständning
-                          </span>
-
-                          <span className="font-bold text-slate-800">
-                            {customCandleLightingTime ||
-                              hebcalInfo.candleLightingTime}
-                          </span>
-                        </div>
-                      )}
-
-                    {sermon.trim() && (
-                      <div className="mt-4 border-t border-slate-100 pt-4">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                          Predikan
-                        </p>
-
-                        <p className="mt-1 font-semibold text-slate-800">
-                          {sermon.trim()}
-                        </p>
-                      </div>
-                    )}
-
-                    {showHavdala &&
-                      (
-                        customHavdalaTime ||
-                        hebcalInfo.havdalaTime
-                      ) && (
-                        <div className="mt-4 flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
-                          <span className="text-sm font-semibold text-slate-500">
-                            Havdala
-                          </span>
-
-                          <span className="font-bold text-slate-800">
-                            {customHavdalaTime ||
-                              hebcalInfo.havdalaTime}
-                          </span>
-                        </div>
-                      )}
-
-                    {comment.trim() && (
-                      <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
-                        {comment.trim()}
-                      </div>
-                    )}
-
-                    {moreInformation.trim() && (
-                      <div className="mt-4 rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
-                        <p className="text-xs font-bold uppercase tracking-wide text-[#183b70]">
-                          Mer information
-                        </p>
-
-                        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
-                          {moreInformation.trim()}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </article>
+                <ProgramCardView
+                  isHoliday={previewCardData.isHoliday}
+                  headerLabel={previewCardData.headerLabel}
+                  displayDate={previewCardData.displayDate}
+                  displayTitle={previewCardData.displayTitle}
+                  hebrewDate={previewCardData.hebrewDate}
+                  program={previewCardData.program}
+                  comment={
+                    comment.trim() ||
+                    undefined
+                  }
+                  moreInformation={
+                    moreInformation.trim() ||
+                    undefined
+                  }
+                />
               </div>
             )}
 
@@ -621,6 +636,44 @@ function DaySettingsEditor({
             onChange={setShowMincha}
           />
 
+          {showMincha &&
+            (
+              previewIsHoliday ||
+              previewIsShabbat
+            ) && (
+              <div className="space-y-2">
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-slate-700">
+                    Rubrik
+                  </span>
+
+                  <input
+                    type="text"
+                    value={customMinchaLabel}
+                    onChange={(event) =>
+                      setCustomMinchaLabel(
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Mincha / Tashlich / Maariv"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+                  />
+                </label>
+
+                <TimeInput
+                  label="Tid"
+                  value={customMinchaTime}
+                  onChange={setCustomMinchaTime}
+                />
+
+                <p className="px-1 text-xs leading-5 text-slate-500">
+                  Lämna tiden tom på Shabbat för automatisk
+                  Mincha Gedolah. En egen rubrik eller tid
+                  ersätter standardvärdet.
+                </p>
+              </div>
+            )}
+
           <Toggle
             label="Visa Havdala"
             checked={showHavdala}
@@ -629,15 +682,11 @@ function DaySettingsEditor({
 
           {showHavdala && (
             <div className="space-y-2">
-              {(
-                customHavdalaTime ||
-                hebcalInfo.havdalaTime
-              ) && (
+              {previewHavdalaTime && (
                 <p className="rounded-2xl bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800">
                   Nuvarande Havdala:{' '}
                   <strong>
-                    {customHavdalaTime ||
-                      hebcalInfo.havdalaTime}
+                    {previewHavdalaTime}
                   </strong>
                   {customHavdalaTime &&
                     hebcalInfo.havdalaTime &&

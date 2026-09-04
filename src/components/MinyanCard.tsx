@@ -135,12 +135,14 @@ function MinyanCard({
     tefila.kind === 'holiday'
 
   const topLabel =
-    isHolidayPackaged
-      ? holidayLabel ??
-        (tefila.kind === 'erevHoliday'
+    holidayLabel ??
+    (
+      isHolidayPackaged
+        ? tefila.kind === 'erevHoliday'
           ? 'Erev högtid'
-          : 'Högtid')
-      : null
+          : 'Högtid'
+        : null
+    )
 
   function openGuestForm() {
     setDraftGuestCount(
@@ -342,7 +344,7 @@ function MinyanCard({
         </div>
       )}
 
-      {isKabbalatShabbat && (
+      {isKabbalatShabbat && !topLabel && (
         <div className="bg-[#68123f] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white">
           Erev Shabbat
         </div>
@@ -367,18 +369,6 @@ function MinyanCard({
             <p className="mt-0.5 text-sm text-slate-500">
               {tefila.date}
             </p>
-
-            {extraInfo && (
-              <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
-                <span aria-hidden="true">🕯️</span>
-                <span>
-                  {extraInfo.label}
-                </span>
-                <span className="font-bold text-slate-900">
-                  {extraInfo.value}
-                </span>
-              </p>
-            )}
 
             <p
               className={`mt-3 font-bold ${
@@ -410,6 +400,16 @@ function MinyanCard({
               {moreInformation && (
                 <p className="mt-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700 ring-1 ring-slate-200">
                   {moreInformation}
+                </p>
+              )}
+
+              {extraInfo && (
+                <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
+                  <span aria-hidden="true">🕯️</span>
+                  <span>{extraInfo.label}</span>
+                  <span className="font-bold text-slate-900">
+                    {extraInfo.value}
+                  </span>
                 </p>
               )}
 
