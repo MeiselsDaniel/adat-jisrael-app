@@ -41,35 +41,97 @@ export function useTefilaRegistrations(
     }
   }, [tefilaId])
 
-  async function register(
-    guests = 0,
-    comment?: string,
-  ) {
+  const currentRegistration =
+    registrations.find(
+      (item) =>
+        item.userId === currentUserId,
+    )
+
+  async function register() {
     if (!currentUserId || !currentUserName) return
 
     await saveRegistration({
       tefilaId,
       userId: currentUserId,
       userName: currentUserName,
-      guestCount: guests,
-      guestComment: comment,
+      attending: true,
+      guestCount:
+        currentRegistration?.guestCount ?? 0,
+      guestNames:
+        currentRegistration?.guestNames,
+      guestComment:
+        currentRegistration?.guestComment,
     })
   }
 
   async function unregister() {
-    if (!currentUserId) return
+    if (!currentUserId || !currentUserName) return
 
-    await removeRegistration(
+    const guestNames =
+      currentRegistration?.guestNames ?? []
+
+    const guestCount =
+      guestNames.length > 0
+        ? guestNames.length
+        : currentRegistration?.guestCount ?? 0
+
+    if (guestCount === 0) {
+      await removeRegistration(
+        tefilaId,
+        currentUserId,
+      )
+      return
+    }
+
+    await saveRegistration({
       tefilaId,
-      currentUserId,
-    )
+      userId: currentUserId,
+      userName: currentUserName,
+      attending: false,
+      guestCount,
+      guestNames:
+        guestNames.length > 0
+          ? guestNames
+          : undefined,
+      guestComment:
+        currentRegistration?.guestComment,
+    })
   }
 
-  const currentRegistration =
-    registrations.find(
-      (item) =>
-        item.userId === currentUserId,
-    )
+  async function saveGuests(
+    guestNames: string[],
+  ) {
+    if (!currentUserId || !currentUserName) return
+
+    const normalizedGuestNames =
+      guestNames
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .slice(0, 50)
+
+    const attending =
+      currentRegistration?.attending === true
+
+    if (
+      normalizedGuestNames.length === 0 &&
+      !attending
+    ) {
+      await removeRegistration(
+        tefilaId,
+        currentUserId,
+      )
+      return
+    }
+
+    await saveRegistration({
+      tefilaId,
+      userId: currentUserId,
+      userName: currentUserName,
+      attending,
+      guestNames: normalizedGuestNames,
+      guestCount: normalizedGuestNames.length,
+    })
+  }
 
   return {
     loading,
@@ -77,9 +139,10 @@ export function useTefilaRegistrations(
     attendance:
       calculateAttendance(registrations),
     registered:
-      currentRegistration !== undefined,
+      currentRegistration?.attending === true,
     currentRegistration,
     register,
     unregister,
+    saveGuests,
   }
 }

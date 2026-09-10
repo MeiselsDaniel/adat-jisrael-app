@@ -5,7 +5,10 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { registerNativePush } from './services/nativePushService'
+import {
+  registerNativePush,
+  listenForNativePushActions,
+} from './services/nativePushService'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import BottomNavigation from './components/BottomNavigation'
 import Header from './components/Header'
@@ -120,6 +123,9 @@ useEffect(() => {
           window.location.pathname,
         ),
     )
+
+  const [sharedNewsId, setSharedNewsId] =
+    useState<string | null>(null)
   
 
   useEffect(() => {
@@ -208,6 +214,40 @@ const [adminOpen, setAdminOpen] = useState(false)
       setAdminView('dashboard')
     }
   }, [sharedEventId, currentUser?.status])
+
+  useEffect(() => {
+    let unsubscribe = () => {}
+    let cancelled = false
+
+    void listenForNativePushActions(
+      (newsId) => {
+        setSharedNewsId(newsId)
+      },
+    ).then((cleanup) => {
+      if (cancelled) {
+        cleanup()
+        return
+      }
+
+      unsubscribe = cleanup
+    })
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (
+      sharedNewsId &&
+      currentUser?.status === 'approved'
+    ) {
+      setPage('information')
+      setAdminOpen(false)
+      setAdminView('dashboard')
+    }
+  }, [sharedNewsId, currentUser?.status])
 
   useEffect(() => {
     if (!firebaseUser) {
@@ -634,6 +674,7 @@ const [adminOpen, setAdminOpen] = useState(false)
             (canAccessMemberInformation ? (
               <InformationPage
                 user={currentUser}
+                targetNewsId={sharedNewsId}
               />
             ) : (
               <MembershipPage

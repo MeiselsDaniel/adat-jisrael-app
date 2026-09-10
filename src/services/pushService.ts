@@ -5,6 +5,7 @@ import {
 } from 'firebase/functions'
 
 export type SendNewsPushInput = {
+  newsId: string
   title: string
   body: string
 }

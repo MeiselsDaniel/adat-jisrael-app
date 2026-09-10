@@ -798,10 +798,45 @@ function HomeTefilaCard({
         }
       : undefined
 
+  const isErevHolidayProgram =
+    !isShacharit &&
+    Boolean(tefilaDateValue) &&
+    daySettings?.dayType === 'erevHoliday'
+
+  const erevHolidayCandleLightingTime =
+    isErevHolidayProgram &&
+    daySettings?.showCandleLighting !== false
+      ? (
+          daySettings?.customCandleLightingTime?.trim() ||
+          getHebcalDayInfo(
+            tefilaDateValue,
+          ).candleLightingTime
+        )
+      : null
+
+  const displayedExtraInfo =
+    isErevHolidayProgram &&
+    erevHolidayCandleLightingTime
+      ? {
+          label: 'Ljuständning',
+          value: erevHolidayCandleLightingTime,
+        }
+      : jahrzeitInfo
+
   return (
     <LiveMinyanCard
-      tefila={tefila}
-      extraInfo={jahrzeitInfo}
+      tefila={
+        isErevHolidayProgram
+          ? {
+              ...tefila,
+              kind: 'erevHoliday',
+              allowRegistration:
+                daySettings?.allowRegistration ??
+                true,
+            }
+          : tefila
+      }
+      extraInfo={displayedExtraInfo}
     />
   )
 }
@@ -976,11 +1011,18 @@ function ProgramCard({
     )
   }, [cardDateValue])
 
+  const showCandleLighting =
+    daySettings?.showCandleLighting ?? true
+
   const showHavdala =
     daySettings?.showHavdala ?? true
 
   const showMincha =
     daySettings?.showMincha ?? true
+
+  const candleLightingTime =
+    daySettings?.customCandleLightingTime?.trim() ||
+    cardHebcalInfo.candleLightingTime
 
   const havdalaTime =
     daySettings?.customHavdalaTime?.trim() ||
@@ -1025,6 +1067,10 @@ function ProgramCard({
       hebcalInfo: cardHebcalInfo,
       daySettings,
       sermon,
+      candleLightingTime:
+        showCandleLighting
+          ? candleLightingTime
+          : null,
       havdalaTime:
         showHavdala
           ? havdalaTime

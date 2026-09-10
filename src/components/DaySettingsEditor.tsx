@@ -258,6 +258,7 @@ function DaySettingsEditor({
 
   const previewIsHoliday =
     dayType === 'holiday' ||
+    dayType === 'erevHoliday' ||
     dayType === 'shabbatHoliday' ||
     dayType === 'erevShabbatHoliday' ||
     dayType === 'erevShabbatErevHoliday'
@@ -437,6 +438,7 @@ function DaySettingsEditor({
           {(
               dayType === 'shabbat' ||
               dayType === 'holiday' ||
+              dayType === 'erevHoliday' ||
               dayType === 'shabbatHoliday' ||
               dayType === 'erevShabbatHoliday' ||
               dayType === 'erevShabbatErevHoliday'
@@ -491,6 +493,14 @@ function DaySettingsEditor({
                 active={dayType === 'holiday'}
                 onClick={() =>
                   setDayType('holiday')
+                }
+              />
+
+              <TypeButton
+                label="Erev högtid"
+                active={dayType === 'erevHoliday'}
+                onClick={() =>
+                  setDayType('erevHoliday')
                 }
               />
 
@@ -897,6 +907,9 @@ function getDayTypeLabel(
 
     case 'holiday':
       return 'Högtid'
+
+    case 'erevHoliday':
+      return 'Erev högtid'
 
     case 'shabbatHoliday':
       return 'Shabbat + högtid'

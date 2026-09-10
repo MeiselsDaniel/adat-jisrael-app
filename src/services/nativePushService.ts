@@ -68,3 +68,37 @@ export async function registerNativePush(
     'iOS FCM-registrering sparad.',
   )
 }
+
+
+export async function listenForNativePushActions(
+  onNewsOpen: (newsId: string) => void,
+): Promise<() => void> {
+  if (Capacitor.getPlatform() !== 'ios') {
+    return () => {}
+  }
+
+  const listener =
+    await FirebaseMessaging.addListener(
+      'notificationActionPerformed',
+      (event) => {
+        const data =
+          event.notification?.data as
+            | {
+                type?: string
+                newsId?: string
+              }
+            | undefined
+
+        if (
+          data?.type === 'news' &&
+          data.newsId
+        ) {
+          onNewsOpen(data.newsId)
+        }
+      },
+    )
+
+  return () => {
+    void listener.remove()
+  }
+}

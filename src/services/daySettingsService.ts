@@ -14,9 +14,8 @@ export type DayType =
   | 'regular'
   | 'shabbat'
   | 'holiday'
+  | 'erevHoliday'
   | 'shabbatHoliday'
-  | 'erevShabbatHoliday'
-  | 'erevShabbatErevHoliday'
   | 'erevShabbatHoliday'
   | 'erevShabbatErevHoliday'
 
@@ -37,6 +36,7 @@ export type DaySettings = {
   showCandleLighting?: boolean
   showHavdala?: boolean
   showMincha?: boolean
+  allowRegistration?: boolean
 
   createdAt?: unknown
   updatedAt?: unknown
@@ -60,6 +60,7 @@ export type SaveDaySettingsInput = {
   showCandleLighting: boolean
   showHavdala: boolean
   showMincha: boolean
+  allowRegistration?: boolean
 
   updatedBy: string
 }
@@ -86,6 +87,7 @@ export async function saveDaySettings({
   showCandleLighting,
   showHavdala,
   showMincha,
+  allowRegistration,
   updatedBy,
 }: SaveDaySettingsInput): Promise<void> {
   const reference = doc(
@@ -138,6 +140,8 @@ export async function saveDaySettings({
       showCandleLighting,
       showHavdala,
       showMincha,
+      allowRegistration:
+        allowRegistration ?? true,
 
       updatedBy,
       updatedAt: serverTimestamp(),

@@ -58,6 +58,7 @@ export type TefilaRegistration = {
   userName: string
   attending: boolean
   guestCount: number
+  guestNames?: string[]
   guestComment?: string
   createdAt?: unknown
   updatedAt?: unknown
@@ -67,7 +68,9 @@ export type SaveRegistrationInput = {
   tefilaId: string
   userId: string
   userName: string
+  attending?: boolean
   guestCount?: number
+  guestNames?: string[]
   guestComment?: string
 }
 
@@ -254,13 +257,26 @@ export async function saveRegistration({
   tefilaId,
   userId,
   userName,
+  attending = true,
   guestCount = 0,
+  guestNames,
   guestComment,
 }: SaveRegistrationInput): Promise<void> {
-  const normalizedGuestCount = Math.max(
-    0,
-    Math.min(50, Math.floor(guestCount)),
-  )
+  const normalizedGuestNames =
+    guestNames === undefined
+      ? undefined
+      : guestNames
+          .map((name) => name.trim())
+          .filter(Boolean)
+          .slice(0, 50)
+
+  const normalizedGuestCount =
+    normalizedGuestNames !== undefined
+      ? normalizedGuestNames.length
+      : Math.max(
+          0,
+          Math.min(50, Math.floor(guestCount)),
+        )
 
   const trimmedComment =
     guestComment?.trim()
@@ -276,10 +292,15 @@ export async function saveRegistration({
     tefilaId,
     userId,
     userName: userName.trim(),
-    attending: true,
+    attending,
     guestCount: normalizedGuestCount,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+  }
+
+  if (normalizedGuestNames !== undefined) {
+    registration.guestNames =
+      normalizedGuestNames
   }
 
   if (trimmedComment) {
@@ -406,13 +427,9 @@ export function calculateAttendance(
 ): number {
   return registrations.reduce(
     (total, registration) => {
-      if (!registration.attending) {
-        return total
-      }
-
       return (
         total +
-        1 +
+        (registration.attending ? 1 : 0) +
         Math.max(0, registration.guestCount)
       )
     },

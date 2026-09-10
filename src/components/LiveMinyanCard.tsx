@@ -102,6 +102,7 @@ function LiveMinyanCard({
     currentRegistration,
     register,
     unregister,
+    saveGuests,
   } = useTefilaRegistrations(
     tefilaId,
     firebaseUser?.uid,
@@ -419,10 +420,10 @@ function LiveMinyanCard({
       currentGuestCount={
         currentRegistration?.guestCount ?? 0
       }
-      currentGuestComment={
-        currentRegistration?.guestComment
+      currentGuestNames={
+        currentRegistration?.guestNames ?? []
       }
-      loading={loading}
+loading={loading}
       cancelled={
         record?.status === 'cancelled'
       }
@@ -442,9 +443,12 @@ function LiveMinyanCard({
         minorDayLabel
       }
       sermon={
-        tefila.title
-          .toLowerCase()
-          .includes('shacharit') ||
+        (
+          tefila.title
+            .toLowerCase()
+            .includes('shacharit') &&
+          daySettings?.dayType !== 'erevHoliday'
+        ) ||
         tefila.kind === 'erevHoliday'
           ? daySettings?.sermon
           : undefined
@@ -457,6 +461,7 @@ function LiveMinyanCard({
       }
       onRegister={register}
       onUnregister={unregister}
+      onSaveGuests={saveGuests}
       onCancel={cancelTefila}
       onReactivate={reactivateTefila}
       onConfirm={saveMinyanResult}

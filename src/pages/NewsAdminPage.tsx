@@ -299,6 +299,8 @@ const [status, setStatus] =
     let newsWasSaved = false
 
     try {
+      let savedNewsId: string
+
       if (editingPost) {
         await updateNewsPost(
           editingPost.id,
@@ -323,8 +325,10 @@ const [status, setStatus] =
             status,
           },
         )
+
+        savedNewsId = editingPost.id
       } else {
-        await createNewsPost({
+        savedNewsId = await createNewsPost({
           title,
           excerpt,
           content,
@@ -372,6 +376,7 @@ const [status, setStatus] =
         sendPushNotification
       ) {
         await sendNewsPushNotification({
+          newsId: savedNewsId,
           title: title.trim(),
           body: excerpt.trim(),
         })

@@ -1,1 +1,48 @@
 @import "tailwindcss";
+
+/*
+ * iOS Safari / Capacitor WKWebView zoomar automatiskt
+ * formulärfält med text mindre än 16 px.
+ * Behåll vanlig pinch-zoom men stoppa oavsiktlig input-zoom.
+ */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+
+/* iOS form zoom protection */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}

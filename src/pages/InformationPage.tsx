@@ -27,10 +27,12 @@ import {
 import { synagogueSettings } from '../data/settings'
 type InformationPageProps = {
   user: AppUser
+  targetNewsId?: string | null
 }
 
 function InformationPage({
   user,
+  targetNewsId = null,
 }: InformationPageProps) {
   const { firebaseUser } =
     useAuth()
@@ -41,6 +43,65 @@ function InformationPage({
   const [showArchive, setShowArchive] =
     useState(false)
 
+  useEffect(() => {
+    if (
+      !targetNewsId ||
+      posts.length === 0
+    ) {
+      return
+    }
+
+    const targetIndex =
+      posts.findIndex(
+        (post) =>
+          post.id === targetNewsId,
+      )
+
+    if (targetIndex >= 10) {
+      setShowArchive(true)
+    }
+  }, [targetNewsId, posts])
+
+  useEffect(() => {
+    if (
+      !targetNewsId ||
+      posts.length === 0
+    ) {
+      return
+    }
+
+    const targetExists =
+      posts.some(
+        (post) =>
+          post.id === targetNewsId,
+      )
+
+    if (!targetExists) {
+      return
+    }
+
+    const timeoutId =
+      window.setTimeout(() => {
+        const element =
+          document.getElementById(
+            `news-${targetNewsId}`,
+          )
+
+        element?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      }, 150)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [
+    targetNewsId,
+    posts,
+    showArchive,
+  ])
+
   const visiblePosts =
     showArchive
       ? posts
@@ -50,14 +111,15 @@ function InformationPage({
     posts.length > 10
 
   const featuredPostId =
-    posts.find(
-      (post) => !post.isPinned,
-    )?.id
+    posts[0]?.id
 
   const [readNewsIds, setReadNewsIds] =
     useState<Set<string>>(
       () => new Set(),
     )
+
+  const [markingAllRead, setMarkingAllRead] =
+    useState(false)
 
   const [loading, setLoading] =
     useState(true)
@@ -67,6 +129,72 @@ function InformationPage({
 
   const [fundraiser, setFundraiser] =
     useState<Fundraiser | null>(null)
+
+  const unreadPosts =
+    posts.filter(
+      (post) =>
+        !readNewsIds.has(post.id),
+    )
+
+  const markAllNewsAsRead =
+    async () => {
+      if (
+        !firebaseUser ||
+        unreadPosts.length === 0 ||
+        markingAllRead
+      ) {
+        return
+      }
+
+      const unreadIds =
+        unreadPosts.map(
+          (post) => post.id,
+        )
+
+      /*
+       * Uppdatera gränssnittet direkt så alla
+       * NY-markeringar försvinner på en gång.
+       */
+      setReadNewsIds(
+        (current) => {
+          const next =
+            new Set(current)
+
+          for (const newsId of unreadIds) {
+            next.add(newsId)
+          }
+
+          return next
+        },
+      )
+
+      setMarkingAllRead(true)
+
+      try {
+        await Promise.all(
+          unreadIds.map(
+            (newsId) =>
+              markNewsAsRead(
+                newsId,
+                firebaseUser.uid,
+              ),
+          ),
+        )
+      } catch (caughtError) {
+        console.error(
+          'Kunde inte markera alla nyheter som lästa:',
+          caughtError,
+        )
+
+        /*
+         * Lässtatusen från Firestore-subscriptionen
+         * kommer att rätta UI:t om någon skrivning
+         * misslyckades.
+         */
+      } finally {
+        setMarkingAllRead(false)
+      }
+    }
 
   useEffect(() => {
     /*
@@ -177,6 +305,29 @@ function InformationPage({
         </p>
       )}
 
+      {!loading &&
+        posts.length > 0 && (
+          <div className="mb-3 flex justify-end">
+            <button
+              type="button"
+              disabled={
+                markingAllRead ||
+                unreadPosts.length === 0
+              }
+              onClick={() => {
+                void markAllNewsAsRead()
+              }}
+              className="text-sm font-bold text-[#183b70] transition hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {markingAllRead
+                ? 'Markerar…'
+                : unreadPosts.length === 0
+                  ? 'Alla nyheter är lästa'
+                  : 'Markera alla som lästa'}
+            </button>
+          </div>
+        )}
+
       {loading ? (
         <section className="rounded-3xl bg-white p-7 text-center shadow-sm ring-1 ring-slate-200">
           <p className="text-sm text-slate-500">
@@ -197,6 +348,9 @@ function InformationPage({
                 readNewsIds.has(
                   post.id,
                 )
+              }
+              autoOpen={
+                post.id === targetNewsId
               }
               onRead={() => {
                 if (!firebaseUser) {
@@ -296,6 +450,7 @@ type NewsCardProps = {
   fundraiser: Fundraiser | null
   featured: boolean
   isRead: boolean
+  autoOpen?: boolean
   onRead: () => void
 }
 
@@ -304,10 +459,27 @@ function NewsCard({
   fundraiser,
   featured,
   isRead,
+  autoOpen = false,
   onRead,
 }: NewsCardProps) {
   const [open, setOpen] =
     useState(false)
+
+  useEffect(() => {
+    if (!autoOpen) {
+      return
+    }
+
+    setOpen(true)
+
+    if (!isRead) {
+      onRead()
+    }
+  }, [
+    autoOpen,
+    isRead,
+    onRead,
+  ])
 
   const publishedDate =
     formatPostDate(
@@ -339,7 +511,10 @@ function NewsCard({
         )
       : 0
 return (
-    <article className="w-full overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-slate-200">
+    <article
+      id={`news-${post.id}`}
+      className="w-full scroll-mt-24 overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-slate-200"
+    >
       {post.imageUrl && (
         <img
           src={post.imageUrl}

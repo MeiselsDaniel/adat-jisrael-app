@@ -410,8 +410,7 @@ function RichEventCard({
 
     const shareData = {
       title: event.title,
-      text: `${event.title} – anmäl dig via Adat Jisrael`,
-      url: shareUrl,
+      text: `${event.title} – anmäl dig via Adat Jisrael\n${shareUrl}`,
     }
 
     try {

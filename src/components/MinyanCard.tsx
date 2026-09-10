@@ -4,7 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  Minus,
+  
   Plus,
   RotateCcw,
   ShieldCheck,
@@ -25,7 +25,7 @@ type MinyanCardProps = {
   attendance: number
   registrations: TefilaRegistration[]
   currentGuestCount: number
-  currentGuestComment?: string
+  currentGuestNames: string[]
   loading?: boolean
   cancelled?: boolean
   canRegister?: boolean
@@ -41,11 +41,11 @@ type MinyanCardProps = {
   sermon?: string
   comment?: string
   moreInformation?: string
-  onRegister: (
-    guestCount: number,
-    guestComment?: string,
-  ) => Promise<void>
+  onRegister: () => Promise<void>
   onUnregister: () => Promise<void>
+  onSaveGuests: (
+    guestNames: string[],
+  ) => Promise<void>
   onCancel?: () => Promise<void>
   onReactivate?: () => Promise<void>
   onConfirm?: (
@@ -60,7 +60,7 @@ function MinyanCard({
   attendance,
   registrations,
   currentGuestCount,
-  currentGuestComment,
+  currentGuestNames,
   loading = false,
   cancelled = false,
   canRegister = true,
@@ -75,6 +75,7 @@ function MinyanCard({
   moreInformation,
   onRegister,
   onUnregister,
+  onSaveGuests,
   onCancel,
   onReactivate,
   onConfirm,
@@ -88,17 +89,12 @@ function MinyanCard({
   const [adminOpen, setAdminOpen] =
     useState(false)
 
-  const [draftGuestCount, setDraftGuestCount] =
-    useState(
-      currentGuestCount > 0
-        ? currentGuestCount
-        : 1,
+  const [draftGuestNames, setDraftGuestNames] =
+    useState<string[]>(
+      currentGuestNames.length > 0
+        ? currentGuestNames
+        : [''],
     )
-
-  const [
-    draftGuestComment,
-    setDraftGuestComment,
-  ] = useState(currentGuestComment ?? '')
 
   const [
     draftActualAttendance,
@@ -145,14 +141,10 @@ function MinyanCard({
     )
 
   function openGuestForm() {
-    setDraftGuestCount(
-      currentGuestCount > 0
-        ? currentGuestCount
-        : 1,
-    )
-
-    setDraftGuestComment(
-      currentGuestComment ?? '',
+    setDraftGuestNames(
+      currentGuestNames.length > 0
+        ? [...currentGuestNames]
+        : [''],
     )
 
     setError('')
@@ -183,7 +175,7 @@ function MinyanCard({
         if (registered) {
           await onUnregister()
         } else {
-          await onRegister(0)
+          await onRegister()
         }
       },
       'Anmälan kunde inte sparas. Försök igen.',
@@ -191,12 +183,21 @@ function MinyanCard({
   }
 
   async function saveGuests() {
+    const normalizedGuestNames =
+      draftGuestNames
+        .map((name) => name.trim())
+        .filter(Boolean)
+
+    if (normalizedGuestNames.length === 0) {
+      setError(
+        'Fyll i namnet på minst en gäst.',
+      )
+      return
+    }
+
     await runAction(
       async () => {
-        await onRegister(
-          draftGuestCount,
-          draftGuestComment,
-        )
+        await onSaveGuests(normalizedGuestNames)
         setGuestFormOpen(false)
         setDetailsOpen(true)
       },
@@ -207,7 +208,7 @@ function MinyanCard({
   async function removeGuests() {
     await runAction(
       async () => {
-        await onRegister(0)
+        await onSaveGuests([])
         setGuestFormOpen(false)
       },
       'Gästerna kunde inte tas bort.',
@@ -281,6 +282,16 @@ function MinyanCard({
             <Clock className="h-4 w-4" />
             {tefila.time}
           </p>
+
+          {extraInfo && (
+            <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-rose-800">
+              <span aria-hidden="true">🕯️</span>
+              <span>{extraInfo.label}</span>
+              <span className="font-bold text-rose-950">
+                {extraInfo.value}
+              </span>
+            </p>
+          )}
 
               {sermon && (
                 <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
@@ -520,8 +531,21 @@ function MinyanCard({
             className="flex items-center justify-center gap-2 rounded-2xl bg-sky-50 px-3 py-3 text-sm font-bold text-[#183b70] ring-1 ring-sky-100 disabled:opacity-60"
           >
             <Users className="h-4 w-4" />
-            {currentGuestCount > 0
-              ? `${currentGuestCount} gäster`
+            {(currentGuestNames.length > 0 ||
+              currentGuestCount > 0)
+              ? `${
+                  currentGuestNames.length > 0
+                    ? currentGuestNames.length
+                    : currentGuestCount
+                } ${
+                  (
+                    currentGuestNames.length > 0
+                      ? currentGuestNames.length
+                      : currentGuestCount
+                  ) === 1
+                    ? 'gäst'
+                    : 'gäster'
+                }`
               : 'Lägg till gäster'}
           </button>
         </div>
@@ -559,21 +583,64 @@ function MinyanCard({
           </div>
 
           <div className="mt-3 space-y-2">
-            {registrations.map(
-              (registration) => (
-                <ParticipantRow
-                  key={registration.id}
-                  title={
-                    registration.userName
+            {registrations.flatMap(
+              (registration) => {
+                const rows = []
+
+                if (registration.attending) {
+                  rows.push(
+                    <ParticipantRow
+                      key={`${registration.id}-self`}
+                      title={registration.userName}
+                      guestCount={0}
+                    />,
+                  )
+                }
+
+                const namedGuests =
+                  registration.guestNames ?? []
+
+                if (namedGuests.length > 0) {
+                  namedGuests.forEach(
+                    (guestName, index) => {
+                      rows.push(
+                        <ParticipantRow
+                          key={`${registration.id}-guest-${index}`}
+                          title={guestName}
+                          guestCount={0}
+                        />,
+                      )
+                    },
+                  )
+                } else if (
+                  registration.guestCount > 0
+                ) {
+                  /*
+                   * Bakåtkompatibilitet för gamla
+                   * registreringar som saknar namn.
+                   */
+                  for (
+                    let index = 0;
+                    index <
+                    registration.guestCount;
+                    index += 1
+                  ) {
+                    rows.push(
+                      <ParticipantRow
+                        key={`${registration.id}-legacy-guest-${index}`}
+                        title={
+                          registration.guestCount === 1
+                            ? 'Gäst'
+                            : `Gäst ${index + 1}`
+                        }
+                        guestCount={0}
+                      />,
+                    )
                   }
-                  guestCount={
-                    registration.guestCount
-                  }
-                  guestComment={
-                    registration.guestComment
-                  }
-                />
-              ),
+                }
+
+                return rows
+              },
             )}
 
             {!loading &&
@@ -693,9 +760,6 @@ function MinyanCard({
                 Lägg till gäster
               </h3>
 
-              <p className="mt-1 text-xs text-slate-500">
-                Du registreras också som deltagare.
-              </p>
             </div>
 
             <button
@@ -710,69 +774,84 @@ function MinyanCard({
             </button>
           </div>
 
-          <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 p-3">
-            <button
-              type="button"
-              onClick={() =>
-                setDraftGuestCount(
-                  (current) =>
-                    Math.max(
-                      0,
-                      current - 1,
-                    ),
-                )
-              }
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#183b70] shadow-sm ring-1 ring-slate-200"
-            >
-              <Minus className="h-5 w-5" />
-            </button>
+          <div className="mt-4 space-y-3">
+            {draftGuestNames.map(
+              (guestName, index) => (
+                <div
+                  key={index}
+                  className="rounded-2xl bg-slate-50 p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <label
+                      htmlFor={`guest-${index}`}
+                      className="text-sm font-bold text-slate-700"
+                    >
+                      Gäst {index + 1}
+                    </label>
 
-            <div className="text-center">
-              <p className="text-3xl font-black text-[#183b70]">
-                {draftGuestCount}
-              </p>
+                    {draftGuestNames.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDraftGuestNames(
+                            (current) =>
+                              current.filter(
+                                (_, itemIndex) =>
+                                  itemIndex !== index,
+                              ),
+                          )
+                        }
+                        className="text-xs font-bold text-rose-700"
+                      >
+                        Ta bort
+                      </button>
+                    )}
+                  </div>
 
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                {draftGuestCount === 1
-                  ? 'gäst'
-                  : 'gäster'}
-              </p>
-            </div>
+                  <input
+                    id={`guest-${index}`}
+                    type="text"
+                    autoComplete="name"
+                    value={guestName}
+                    onChange={(event) => {
+                      const value =
+                        event.target.value
 
-            <button
-              type="button"
-              onClick={() =>
-                setDraftGuestCount(
-                  (current) =>
-                    Math.min(
-                      50,
-                      current + 1,
-                    ),
-                )
-              }
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#183b70] shadow-sm ring-1 ring-slate-200"
-            >
-              <Plus className="h-5 w-5" />
-            </button>
+                      setDraftGuestNames(
+                        (current) =>
+                          current.map(
+                            (name, itemIndex) =>
+                              itemIndex === index
+                                ? value
+                                : name,
+                          ),
+                      )
+                    }}
+                    placeholder="Namn"
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base outline-none focus:border-sky-600"
+                  />
+                </div>
+              ),
+            )}
+
+            {draftGuestNames.length < 50 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setDraftGuestNames(
+                    (current) => [
+                      ...current,
+                      '',
+                    ],
+                  )
+                }
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-50 px-4 py-3 text-sm font-bold text-[#183b70] ring-1 ring-sky-100"
+              >
+                <Plus className="h-4 w-4" />
+                Lägg till ytterligare gäst
+              </button>
+            )}
           </div>
-
-          <label className="mt-4 block">
-            <span className="text-sm font-bold text-slate-700">
-              Kommentar, valfritt
-            </span>
-
-            <textarea
-              value={draftGuestComment}
-              onChange={(event) =>
-                setDraftGuestComment(
-                  event.target.value,
-                )
-              }
-              rows={3}
-              placeholder="Exempel: Turistgrupp från Israel eller Pappa"
-              className="mt-2 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-600"
-            />
-          </label>
 
           <button
             type="button"

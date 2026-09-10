@@ -36,6 +36,7 @@ type BuildProgramCardDataInput = {
   hebcalInfo: HebcalProgramInfo
   daySettings: DaySettings | null
   sermon?: string | null
+  candleLightingTime?: string | null
   havdalaTime?: string | null
   minchaTime?: string | null
   minchaLabel?: string | null
@@ -99,6 +100,7 @@ export function buildProgramCardData({
   hebcalInfo,
   daySettings,
   sermon,
+  candleLightingTime,
   havdalaTime,
   minchaTime,
   minchaLabel,
@@ -136,6 +138,7 @@ export function buildProgramCardData({
 
   const configuredAsHoliday =
     daySettings?.dayType === 'holiday' ||
+    daySettings?.dayType === 'erevHoliday' ||
     daySettings?.dayType === 'shabbatHoliday' ||
     daySettings?.dayType === 'erevShabbatHoliday' ||
     daySettings?.dayType ===
@@ -148,13 +151,22 @@ export function buildProgramCardData({
   const customHolidayName =
     daySettings?.holidayName?.trim()
 
+  const rawHolidayDisplayTitle =
+    customHolidayName ||
+    actualHolidayNames[0] ||
+    'Högtid'
+
+  const holidayDisplayTitle =
+    daySettings?.dayType === 'erevHoliday' &&
+    !rawHolidayDisplayTitle
+      .toLowerCase()
+      .startsWith('erev ')
+      ? `Erev ${rawHolidayDisplayTitle}`
+      : rawHolidayDisplayTitle
+
   const baseDisplayTitle =
     isHoliday
-      ? (
-          customHolidayName ||
-          actualHolidayNames[0] ||
-          'Högtid'
-        )
+      ? holidayDisplayTitle
       : (
           hebcalInfo.parasha ||
           todayProgram.title
@@ -239,7 +251,10 @@ export function buildProgramCardData({
       .toLowerCase()
       .includes('yom kippur')
 
-  if (shacharit) {
+  if (
+    shacharit &&
+    daySettings?.dayType !== 'erevHoliday'
+  ) {
     program.push(shacharit)
   }
 
@@ -269,6 +284,19 @@ export function buildProgramCardData({
           : `${kiddushSponsor} bjuder på Kiddush.`
         : 'Adat Jisrael bjuder på Kiddush.',
       icon: 'wine',
+    })
+  }
+
+  if (
+    daySettings?.dayType === 'erevHoliday' &&
+    daySettings?.showCandleLighting !== false &&
+    candleLightingTime
+  ) {
+    program.push({
+      id: 'candle-lighting',
+      label: 'Ljuständning',
+      value: candleLightingTime,
+      icon: 'clock',
     })
   }
 

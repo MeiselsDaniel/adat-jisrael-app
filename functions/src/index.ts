@@ -4,7 +4,6 @@ import {
 } from "firebase-admin/firestore";
 import {
   getMessaging,
-  type FidMulticastMessage,
 } from "firebase-admin/messaging";
 import {setGlobalOptions} from "firebase-functions";
 import {defineSecret} from "firebase-functions/params";
@@ -53,6 +52,7 @@ type PushRegistrationData = {
   installationId?: string;
   userId?: string;
   enabled?: boolean;
+  platform?: string;
 };
 
 type TefilaRegistrationData = {
@@ -63,7 +63,8 @@ type TefilaRegistrationData = {
 
 type PushRecipient = {
   documentId: string;
-  fid: string;
+  target: string;
+  targetType: "fid" | "token";
 };
 
 type SendResult = {
@@ -809,7 +810,13 @@ export const sendNewsPush =
           ? request.data.body.trim()
           : "";
 
-      if (!title || !body) {
+      const newsId =
+        typeof request.data?.newsId ===
+        "string"
+          ? request.data.newsId.trim()
+          : "";
+
+      if (!newsId || !title || !body) {
         throw new HttpsError(
           "invalid-argument",
           "Rubrik och ingress krävs.",
@@ -827,7 +834,9 @@ export const sendNewsPush =
             body,
             data: {
               type: "news",
-              url: "/?page=information",
+              newsId,
+              url:
+                `/?page=information&newsId=${encodeURIComponent(newsId)}`,
             },
           },
         );
@@ -904,9 +913,13 @@ async function getGeneralPushRecipients():
       recipients.push({
         documentId:
           document.id,
-        fid:
+        target:
           registration
             .installationId,
+        targetType:
+          registration.platform === "ios"
+            ? "token"
+            : "fid",
       });
     },
   );
@@ -1038,9 +1051,13 @@ async function getTfilaRecipients(
       recipients.push({
         documentId:
           document.id,
-        fid:
+        target:
           registration
             .installationId,
+        targetType:
+          registration.platform === "ios"
+            ? "token"
+            : "fid",
       });
     },
   );
@@ -1067,57 +1084,50 @@ async function sendPushToRecipients(
   let successCount = 0;
   let failureCount = 0;
 
-  /*
-   * FCM multicast tillåter högst 500 FID:er
-   * åt gången.
-   */
-  for (
-    let offset = 0;
-    offset < recipients.length;
-    offset += 500
-  ) {
-    const batch =
-      recipients.slice(
-        offset,
-        offset + 500,
-      );
+  async function sendBatch(
+    batch: PushRecipient[],
+    targetType: "fid" | "token",
+  ): Promise<void> {
+    if (batch.length === 0) {
+      return;
+    }
 
-    const multicastMessage: FidMulticastMessage = {
-      fids:
-        batch.map(
-          (recipient) =>
-            recipient.fid,
-        ),
+    const baseMessage = {
       notification: {
-        title:
-          message.title,
-        body:
-          message.body,
+        title: message.title,
+        body: message.body,
       },
-      data:
-        message.data,
+      data: message.data,
       webpush: {
         fcmOptions: {
-          link:
-            message.data.url,
+          link: message.data.url,
         },
       },
     };
 
     const response =
-      await getMessaging()
-        .sendEachForMulticast(
-          multicastMessage,
-        );
+      targetType === "token"
+        ? await getMessaging()
+            .sendEachForMulticast({
+              ...baseMessage,
+              tokens: batch.map(
+                (recipient) =>
+                  recipient.target,
+              ),
+            })
+        : await getMessaging()
+            .sendEachForMulticast({
+              ...baseMessage,
+              fids: batch.map(
+                (recipient) =>
+                  recipient.target,
+              ),
+            });
 
-    successCount +=
-      response.successCount;
+    successCount += response.successCount;
+    failureCount += response.failureCount;
 
-    failureCount +=
-      response.failureCount;
-
-    const invalidDocuments:
-      string[] = [];
+    const invalidDocuments: string[] = [];
 
     response.responses.forEach(
       (item, index) => {
@@ -1134,8 +1144,9 @@ async function sendPushToRecipients(
             code,
             message:
               item.error?.message ?? "",
-            fid:
-              batch[index]?.fid,
+            target:
+              batch[index]?.target,
+            targetType,
             error:
               item.error,
           },
@@ -1153,8 +1164,7 @@ async function sendPushToRecipients(
           )
         ) {
           const documentId =
-            batch[index]
-              ?.documentId;
+            batch[index]?.documentId;
 
           if (documentId) {
             invalidDocuments.push(
@@ -1165,9 +1175,7 @@ async function sendPushToRecipients(
       },
     );
 
-    if (
-      invalidDocuments.length > 0
-    ) {
+    if (invalidDocuments.length > 0) {
       const firestoreBatch =
         db.batch();
 
@@ -1187,9 +1195,57 @@ async function sendPushToRecipients(
     }
   }
 
+  const tokenRecipients =
+    recipients.filter(
+      (recipient) =>
+        recipient.targetType === "token",
+    );
+
+  const fidRecipients =
+    recipients.filter(
+      (recipient) =>
+        recipient.targetType === "fid",
+    );
+
+  logger.info(
+    "Push-mottagartyper",
+    {
+      total: recipients.length,
+      iosTokens: tokenRecipients.length,
+      webFids: fidRecipients.length,
+    },
+  );
+
+  for (
+    let offset = 0;
+    offset < tokenRecipients.length;
+    offset += 500
+  ) {
+    await sendBatch(
+      tokenRecipients.slice(
+        offset,
+        offset + 500,
+      ),
+      "token",
+    );
+  }
+
+  for (
+    let offset = 0;
+    offset < fidRecipients.length;
+    offset += 500
+  ) {
+    await sendBatch(
+      fidRecipients.slice(
+        offset,
+        offset + 500,
+      ),
+      "fid",
+    );
+  }
+
   return {
-    recipients:
-      recipients.length,
+    recipients: recipients.length,
     successCount,
     failureCount,
   };
