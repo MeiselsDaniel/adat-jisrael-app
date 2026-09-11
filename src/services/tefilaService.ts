@@ -40,6 +40,7 @@ export type TefilaRecord = {
   time: string
   status: TefilaStatus
   allowRegistration: boolean
+  showOnHome?: boolean
   kind?: TefilaKind
 
   minyanResult?: MinyanResult

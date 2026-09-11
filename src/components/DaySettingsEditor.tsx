@@ -21,6 +21,10 @@ import {
   subscribeToDaySettings,
   type DayType,
 } from '../services/daySettingsService'
+import {
+  deleteTefila,
+  saveTefila,
+} from '../services/tefilaService'
 
 
 
@@ -104,6 +108,11 @@ function DaySettingsEditor({
     setShowMincha,
   ] = useState(true)
 
+  const [
+    showMinchaInCalendar,
+    setShowMinchaInCalendar,
+  ] = useState(false)
+
   const [saving, setSaving] =
     useState(false)
 
@@ -174,6 +183,11 @@ function DaySettingsEditor({
           settings?.showMincha ??
             resolvedDayType === 'shabbat',
         )
+
+        setShowMinchaInCalendar(
+          settings?.showMinchaInCalendar ??
+            false,
+        )
       },
       (caughtError) => {
         console.error(caughtError)
@@ -225,6 +239,43 @@ function DaySettingsEditor({
     setError('')
 
     try {
+      const calendarTefilaId =
+        `${dateValue}-program-mincha`
+
+      const calendarDate =
+        new Date(`${dateValue}T12:00:00`)
+
+      const usesAutomaticMincha =
+        dayType === 'shabbat' ||
+        dayType === 'shabbatHoliday' ||
+        hebcalInfo.isShabbat
+
+      const calendarMinchaTime =
+        customMinchaTime.trim() ||
+        (
+          usesAutomaticMincha
+            ? (
+                getMinchaGedolaTime(
+                  calendarDate,
+                ) ?? ''
+              )
+            : ''
+        )
+
+      const calendarMinchaTitle =
+        customMinchaLabel.trim() ||
+        'Mincha'
+
+      if (
+        showMincha &&
+        showMinchaInCalendar &&
+        !calendarMinchaTime
+      ) {
+        throw new Error(
+          'Ange en tid för Mincha innan den visas i kalendern.',
+        )
+      }
+
       await saveDaySettings({
         date: dateValue,
         dayType,
@@ -239,8 +290,28 @@ function DaySettingsEditor({
         showCandleLighting,
         showHavdala,
         showMincha,
+        showMinchaInCalendar,
         updatedBy: firebaseUser.uid,
       })
+
+      if (
+        showMincha &&
+        showMinchaInCalendar
+      ) {
+        await saveTefila({
+          id: calendarTefilaId,
+          title: calendarMinchaTitle,
+          date: dateValue,
+          time: calendarMinchaTime,
+          status: 'scheduled',
+          allowRegistration: true,
+          showOnHome: false,
+        })
+      } else {
+        await deleteTefila(
+          calendarTefilaId,
+        )
+      }
 
       setSaved(true)
     } catch (caughtError) {
@@ -681,6 +752,14 @@ function DaySettingsEditor({
                   Mincha Gedolah. En egen rubrik eller tid
                   ersätter standardvärdet.
                 </p>
+
+                <Toggle
+                  label="Visa även i kalendern"
+                  checked={showMinchaInCalendar}
+                  onChange={
+                    setShowMinchaInCalendar
+                  }
+                />
               </div>
             )}
 

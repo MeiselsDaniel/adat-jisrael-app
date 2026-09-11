@@ -303,7 +303,10 @@ useEffect(() => {
     () =>
       mergeStandardAndFirebaseTfilot(
         upcomingTfilot,
-        firebaseTfilot,
+        firebaseTfilot.filter(
+          (record) =>
+            record.showOnHome !== false,
+        ),
       )
         .filter((tefila) =>
           isTefilaStillCurrent(

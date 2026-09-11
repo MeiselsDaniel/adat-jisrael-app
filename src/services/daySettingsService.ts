@@ -36,6 +36,7 @@ export type DaySettings = {
   showCandleLighting?: boolean
   showHavdala?: boolean
   showMincha?: boolean
+  showMinchaInCalendar?: boolean
   allowRegistration?: boolean
 
   createdAt?: unknown
@@ -60,6 +61,7 @@ export type SaveDaySettingsInput = {
   showCandleLighting: boolean
   showHavdala: boolean
   showMincha: boolean
+  showMinchaInCalendar?: boolean
   allowRegistration?: boolean
 
   updatedBy: string
@@ -87,6 +89,7 @@ export async function saveDaySettings({
   showCandleLighting,
   showHavdala,
   showMincha,
+  showMinchaInCalendar,
   allowRegistration,
   updatedBy,
 }: SaveDaySettingsInput): Promise<void> {
@@ -140,6 +143,8 @@ export async function saveDaySettings({
       showCandleLighting,
       showHavdala,
       showMincha,
+      showMinchaInCalendar:
+        showMinchaInCalendar ?? false,
       allowRegistration:
         allowRegistration ?? true,
 

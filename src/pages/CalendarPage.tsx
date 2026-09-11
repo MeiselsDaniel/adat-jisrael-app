@@ -510,6 +510,16 @@ function buildCalendarItems({
 }): CalendarItem[] {
   const items: CalendarItem[] = []
 
+  console.table(
+    firebaseTfilot.map((tefila) => ({
+      id: tefila.id,
+      date: tefila.date,
+      time: tefila.time,
+      title: tefila.title,
+      status: tefila.status,
+    })),
+  )
+
   /*
    * Tfilot:
    * standardschemat är grunden.
@@ -565,6 +575,18 @@ function buildCalendarItems({
    * Firebase-versionen får fortfarande ta över
    * om admin har skapat/ändrat just den tfilan.
    */
+  const cancelledTefilaIds =
+    new Set(
+      firebaseTfilot
+        .filter(
+          (tefila) =>
+            tefila.status === 'cancelled',
+        )
+        .map(
+          (tefila) => tefila.id,
+        ),
+    )
+
   const kabbalatCursor =
     new Date(start)
 
@@ -582,7 +604,10 @@ function buildCalendarItems({
        * Lägg bara standardversionen om
        * Firebase inte redan har samma ID.
        */
-      if (!mergedTfilot.has(tefilaId)) {
+      if (
+        !mergedTfilot.has(tefilaId) &&
+        !cancelledTefilaIds.has(tefilaId)
+      ) {
         mergedTfilot.set(
           tefilaId,
           {
