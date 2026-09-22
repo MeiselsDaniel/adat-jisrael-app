@@ -91,6 +91,9 @@ function NewEventPage({
   const [tefilaHolidayName, setTefilaHolidayName] =
     useState('')
 
+  const [tefilaNote, setTefilaNote] =
+    useState('')
+
 
   const [title, setTitle] = useState(
     initialEvent?.title ?? 'Shacharit',
@@ -209,6 +212,7 @@ function NewEventPage({
     if (nextType === 'tefila') {
       setTefilaKind('regular')
       setTefilaHolidayName('')
+      setTefilaNote('')
       setTitle('Shacharit')
       setAllowRegistration(true)
       setShowOnHome(true)
@@ -452,6 +456,11 @@ function NewEventPage({
             tefilaHolidayName.trim()
               ? tefilaHolidayName.trim()
               : undefined,
+          note:
+            eventType === 'tefila' &&
+            tefilaNote.trim()
+              ? tefilaNote.trim()
+              : undefined,
         }
 
         await saveTefila(tefilaRecord)
@@ -617,6 +626,26 @@ function NewEventPage({
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 Valfritt. Lämna tomt för att använda
                 dagens högtidsnamn automatiskt.
+              </p>
+            </Field>
+          )}
+
+          {eventType === 'tefila' && (
+            <Field label="Anteckning för denna tfila">
+              <textarea
+                value={tefilaNote}
+                onChange={(event) =>
+                  setTefilaNote(
+                    event.target.value,
+                  )
+                }
+                rows={3}
+                placeholder="Exempel: Bat mitzva"
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+              />
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Visas bara på denna tfila.
               </p>
             </Field>
           )}

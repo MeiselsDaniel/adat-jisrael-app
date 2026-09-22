@@ -1298,6 +1298,9 @@ function convertTefilaRecord(
     holidayName:
       record.holidayName ??
       existing?.holidayName,
+    note:
+      record.note ??
+      existing?.note,
     attending:
       existing?.attending ?? 0,
   }

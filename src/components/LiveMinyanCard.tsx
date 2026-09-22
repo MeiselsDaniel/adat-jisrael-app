@@ -468,6 +468,7 @@ loading={loading}
           : undefined
       }
       comment={
+        tefila.note?.trim() ||
         daySettings?.comment
       }
       moreInformation={

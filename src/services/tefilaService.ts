@@ -43,6 +43,7 @@ export type TefilaRecord = {
   showOnHome?: boolean
   kind?: TefilaKind
   holidayName?: string
+  note?: string
 
   minyanResult?: MinyanResult
   actualAttendance?: number

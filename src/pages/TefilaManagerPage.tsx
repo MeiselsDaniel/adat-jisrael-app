@@ -130,6 +130,8 @@ function TefilaManagerPage({
                   record.kind,
                 holidayName:
                   record.holidayName,
+                note:
+                  record.note,
                 allowRegistration:
                   record.allowRegistration,
               dateValue:
@@ -183,6 +185,8 @@ function TefilaManagerPage({
                   record.kind,
                 holidayName:
                   record.holidayName,
+                note:
+                  record.note,
                 attending: 0,
                 allowRegistration:
                   record.allowRegistration,
@@ -253,6 +257,9 @@ function TefilaManagerPage({
     draftHolidayName,
     setDraftHolidayName,
   ] = useState('')
+
+  const [draftNote, setDraftNote] =
+    useState('')
 
   const [savingId, setSavingId] =
     useState<string | null>(null)
@@ -497,6 +504,10 @@ function TefilaManagerPage({
       tefila.holidayName ?? '',
     )
 
+    setDraftNote(
+      tefila.note ?? '',
+    )
+
     setError('')
   }
 
@@ -504,6 +515,8 @@ function TefilaManagerPage({
     setEditingId(null)
     setDraftTime('')
     setDraftTitle('')
+    setDraftHolidayName('')
+    setDraftNote('')
     setError('')
   }
 
@@ -544,6 +557,9 @@ function TefilaManagerPage({
         allowRegistration: true,
         holidayName:
           draftHolidayName.trim() ||
+          undefined,
+        note:
+          draftNote.trim() ||
           undefined,
       }
 
@@ -771,6 +787,28 @@ function TefilaManagerPage({
                           <p className="mt-2 text-xs leading-5 text-slate-500">
                             Valfritt. Lämna tomt för att använda
                             dagens högtidsnamn.
+                          </p>
+                        </label>
+
+                        <label className="mb-4 block">
+                          <span className="text-sm font-bold text-slate-700">
+                            Anteckning för denna tfila
+                          </span>
+
+                          <textarea
+                            value={draftNote}
+                            onChange={(event) =>
+                              setDraftNote(
+                                event.target.value,
+                              )
+                            }
+                            rows={3}
+                            placeholder="Exempel: Bat mitzva"
+                            className="mt-2 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-600"
+                          />
+
+                          <p className="mt-2 text-xs leading-5 text-slate-500">
+                            Visas bara på denna tfila.
                           </p>
                         </label>
 
