@@ -3,13 +3,11 @@ import type { FormEvent } from 'react'
 import {
   ArrowRight,
   Check,
-  Heart,
   Mail,
   MapPin,
   Phone,
   Send,
   User,
-  Users,
 } from 'lucide-react'
 
 type MembershipPageProps = {
@@ -30,6 +28,17 @@ function MembershipPage({
   const [address, setAddress] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+
+  const [feeCalculatorOpen, setFeeCalculatorOpen] =
+    useState(false)
+  const [feeUnder26, setFeeUnder26] =
+    useState<boolean | null>(null)
+  const [feeJfstMember, setFeeJfstMember] =
+    useState<boolean | null>(null)
+  const [feeSeat, setFeeSeat] =
+    useState<boolean | null>(null)
+  const [feeGender, setFeeGender] =
+    useState<'man' | 'woman' | null>(null)
 
   function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -224,22 +233,64 @@ function MembershipPage({
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl bg-[#183b70] text-white shadow-sm">
-        <div className="p-6">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15">
-            <Users className="h-7 w-7" />
+      <section className="rounded-3xl bg-[#183b70] p-4 text-white shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 2.5 20.2 17H3.8L12 2.5Z" />
+              <path d="M12 21.5 3.8 7h16.4L12 21.5Z" />
+            </svg>
           </div>
 
-          <h1 className="mt-6 text-2xl font-bold">
+          <h1 className="text-xl font-bold">
             Medlemskap i Adat Jisrael
           </h1>
-
-          <p className="mt-3 leading-7 text-blue-100">
-            Som medlem bidrar du till ett levande judiskt
-            församlingsliv och till Adat Jisraels framtid.
-          </p>
         </div>
       </section>
+
+      <MembershipFeeCalculator
+        open={feeCalculatorOpen}
+        setOpen={setFeeCalculatorOpen}
+        under26={feeUnder26}
+        setUnder26={(value) => {
+          setFeeUnder26(value)
+          setFeeJfstMember(null)
+          setFeeSeat(null)
+          setFeeGender(null)
+        }}
+        jfstMember={feeJfstMember}
+        setJfstMember={(value) => {
+          setFeeJfstMember(value)
+          setFeeSeat(null)
+          setFeeGender(null)
+        }}
+        seat={feeSeat}
+        setSeat={(value) => {
+          setFeeSeat(value)
+          setFeeGender(null)
+        }}
+        gender={feeGender}
+        setGender={setFeeGender}
+        onApply={() => setFormOpen(true)}
+      />
+
+      <button
+        type="button"
+        onClick={() => setFormOpen(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#68123f] px-5 py-4 font-bold text-white transition hover:bg-[#561034]"
+      >
+        Ansök om medlemskap
+        <ArrowRight className="h-5 w-5" />
+      </button>
 
       <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <h2 className="text-lg font-bold text-[#183b70]">
@@ -247,45 +298,42 @@ function MembershipPage({
         </h2>
 
         <div className="mt-5 space-y-5">
-      <Benefit
-        title="Gemenskap & inflytande"
-        text="Adat Jisrael är inte en tjänst vi nyttjar, utan en gemenskap vi bygger tillsammans. Som medlem är du med och formar församlingen, stödjer verksamheten och bidrar till Adat Jisraels framtid."
-      />
+          <Benefit
+            title="Gemenskap & inflytande"
+            text="Adat Jisrael är inte en tjänst vi nyttjar, utan en gemenskap vi bygger tillsammans. Som medlem är du med och formar församlingen och bidrar till Adat Jisraels framtid."
+          />
 
-      <Benefit
-        title="Tillgång till hela appen"
-        text="Som icke-medlem har du bara tillgång till en begränsad del av appen. Som medlem får du hela Adat Jisrael-appen med medlemsnyheter och information, aktiviteter, Kiddushbokning, anmälan till minjan och andra medlemsfunktioner."
-      />
+          <Benefit
+            title="Du gör verksamheten möjlig"
+            text="Din medlemsavgift bidrar bland annat till Kiddush, professionell chazan under Yom Kippur, städning av synagogan och andra kostnader som gör att vi kan upprätthålla ett levande judiskt församlingsliv."
+          />
 
-      <Benefit
-        title="Judiskt liv i vardagen"
-        text="Appen hjälper dig också att hålla koll på det judiska året och livet i församlingen, med bland annat kalender, tider för tfilot och personliga Jahrzeit-påminnelser."
-      />
-
-      <Benefit
-        title="Medlemsförmåner"
-        text="Som medlem får du medlemspris på utvalda aktiviteter och evenemang och tillgång till sådant som är särskilt för Adat Jisraels medlemmar."
-      />
-    </div>
-      </section>
-
-      <section className="flex gap-4 rounded-3xl bg-rose-50 p-5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[#68123f]">
-          <Heart className="h-6 w-6" />
-        </div>
-
-        <div>
-          <h2 className="font-bold text-[#68123f]">
-            Ditt medlemskap är viktigt
-          </h2>
-
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Medlemskap och engagemang gör det möjligt för
-            Adat Jisrael att upprätthålla tfilot, gemenskap
-            och judiskt liv i Stockholm.
-          </p>
+          <Benefit
+            title="Medlemsförmåner"
+            text="Som medlem får du tillgång till hela Adat Jisrael-appen med medlemsnyheter, Kiddushbokning, minjananmälan, personliga Jahrzeit-påminnelser och andra medlemsfunktioner. Du får också medlemspris på utvalda aktiviteter och evenemang."
+          />
         </div>
       </section>
+
+      <div className="px-2 text-xs leading-5 text-slate-500">
+        <p>
+          Enligt Adat Jisraels stadgar kan medlemskap
+          beviljas personer som är födda judar eller har
+          genomgått en ortodox konvertering.
+        </p>
+
+        <p className="mt-2">
+          Kan du inte bli medlem men vill stödja Adat Jisrael
+          som sponsor?{' '}
+          <a
+            href="mailto:info@adatjisrael.se"
+            className="font-semibold text-[#183b70] underline underline-offset-2"
+          >
+            Kontakta oss
+          </a>
+          .
+        </p>
+      </div>
 
       <button
         type="button"
@@ -296,6 +344,257 @@ function MembershipPage({
         <ArrowRight className="h-5 w-5" />
       </button>
     </div>
+  )
+}
+
+type MembershipFeeCalculatorProps = {
+  open: boolean
+  setOpen: (value: boolean) => void
+  under26: boolean | null
+  setUnder26: (value: boolean) => void
+  jfstMember: boolean | null
+  setJfstMember: (value: boolean) => void
+  seat: boolean | null
+  setSeat: (value: boolean) => void
+  gender: 'man' | 'woman' | null
+  setGender: (value: 'man' | 'woman') => void
+  onApply: () => void
+}
+
+function MembershipFeeCalculator({
+  open,
+  setOpen,
+  under26,
+  setUnder26,
+  jfstMember,
+  setJfstMember,
+  seat,
+  setSeat,
+  gender,
+  setGender,
+  onApply,
+}: MembershipFeeCalculatorProps) {
+  let fee: number | null = null
+  let summary = ''
+
+  if (under26 === true && seat !== null) {
+    fee = seat ? 350 : 100
+    summary = `Under 26 år · ${
+      seat ? 'med fast plats' : 'utan fast plats'
+    }`
+  }
+
+  if (
+    under26 === false &&
+    jfstMember !== null &&
+    seat === false
+  ) {
+    fee = jfstMember ? 1400 : 1700
+    summary = `Vuxen · ${
+      jfstMember
+        ? 'medlem i JFST'
+        : 'inte medlem i JFST'
+    } · utan fast plats`
+  }
+
+  if (
+    under26 === false &&
+    jfstMember !== null &&
+    seat === true &&
+    gender !== null
+  ) {
+    if (jfstMember) {
+      fee = gender === 'man' ? 2100 : 1500
+    } else {
+      fee = gender === 'man' ? 2900 : 2200
+    }
+
+    summary = `Vuxen · ${
+      jfstMember
+        ? 'medlem i JFST'
+        : 'inte medlem i JFST'
+    } · med fast plats · ${
+      gender === 'man' ? 'herr' : 'dam'
+    }`
+  }
+
+  return (
+    <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-4 text-left"
+        aria-expanded={open}
+      >
+        <div>
+          <h2 className="text-lg font-bold text-[#183b70]">
+            Räkna ut din medlemsavgift
+          </h2>
+
+          <p className="mt-1 text-sm leading-6 text-slate-500">
+            Se vad medlemskapet kostar för dig
+          </p>
+        </div>
+
+        <span
+          className={`text-xl text-slate-400 transition-transform ${
+            open ? 'rotate-180' : ''
+          }`}
+          aria-hidden="true"
+        >
+          ⌄
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-6 space-y-6">
+          <FeeQuestion
+            question="Är du under 26 år?"
+            value={under26}
+            onChange={setUnder26}
+          />
+
+          {under26 === false && (
+            <FeeQuestion
+              question="Är du medlem i Judiska Församlingen i Stockholm (JFST)?"
+              value={jfstMember}
+              onChange={setJfstMember}
+            />
+          )}
+
+          {(under26 === true ||
+            (under26 === false &&
+              jfstMember !== null)) && (
+            <FeeQuestion
+              question="Vill du ha en fast plats i synagogan?"
+              value={seat}
+              onChange={setSeat}
+            />
+          )}
+
+          {under26 === false &&
+            jfstMember !== null &&
+            seat === true && (
+              <div>
+                <p className="text-sm font-bold text-slate-700">
+                  Vilken avgift gäller?
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Avgiften för fast plats skiljer sig mellan
+                  herr- och damsektionen.
+                </p>
+
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <ChoiceButton
+                    active={gender === 'man'}
+                    onClick={() => setGender('man')}
+                  >
+                    Herr
+                  </ChoiceButton>
+
+                  <ChoiceButton
+                    active={gender === 'woman'}
+                    onClick={() => setGender('woman')}
+                  >
+                    Dam
+                  </ChoiceButton>
+                </div>
+              </div>
+            )}
+
+          {fee !== null && (
+            <div className="rounded-2xl bg-sky-50 p-5 text-center">
+              <p className="text-sm font-bold text-sky-700">
+                Din medlemsavgift
+              </p>
+
+              <p className="mt-1 text-3xl font-black text-[#183b70]">
+                {fee.toLocaleString('sv-SE')} kr
+                <span className="text-base font-bold text-slate-500">
+                  /år
+                </span>
+              </p>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {summary}
+              </p>
+
+              <button
+                type="button"
+                onClick={onApply}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#68123f] px-5 py-3.5 font-bold text-white transition hover:bg-[#561034]"
+              >
+                Ansök om medlemskap
+                <ArrowRight className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+type FeeQuestionProps = {
+  question: string
+  value: boolean | null
+  onChange: (value: boolean) => void
+}
+
+function FeeQuestion({
+  question,
+  value,
+  onChange,
+}: FeeQuestionProps) {
+  return (
+    <div>
+      <p className="text-sm font-bold text-slate-700">
+        {question}
+      </p>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <ChoiceButton
+          active={value === true}
+          onClick={() => onChange(true)}
+        >
+          Ja
+        </ChoiceButton>
+
+        <ChoiceButton
+          active={value === false}
+          onClick={() => onChange(false)}
+        >
+          Nej
+        </ChoiceButton>
+      </div>
+    </div>
+  )
+}
+
+type ChoiceButtonProps = {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}
+
+function ChoiceButton({
+  active,
+  onClick,
+  children,
+}: ChoiceButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`min-h-12 rounded-2xl border px-4 py-3 text-sm font-bold transition ${
+        active
+          ? 'border-[#183b70] bg-sky-50 text-[#183b70]'
+          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 

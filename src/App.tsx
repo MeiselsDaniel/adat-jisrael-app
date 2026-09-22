@@ -668,6 +668,9 @@ const [adminOpen, setAdminOpen] = useState(false)
           {page === 'calendar' && (
             <CalendarPage
               targetEventId={sharedEventId}
+              onBecomeMember={() =>
+                setPage('membership')
+              }
             />
           )}
 
