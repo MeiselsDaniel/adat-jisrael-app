@@ -24,6 +24,7 @@ import KiddushPage from './pages/KiddushPage'
 import KiddushAdminPage from './pages/KiddushAdminPage'
 import LoginPage from './pages/LoginPage'
 import MembershipPage from './pages/MembershipPage'
+import MemberOnlyPage from './pages/MemberOnlyPage'
 import MorePage from './pages/MorePage'
 import ProfilePage from './pages/ProfilePage'
 import BoardContactPage from './pages/BoardContactPage'
@@ -677,9 +678,11 @@ const [adminOpen, setAdminOpen] = useState(false)
                 targetNewsId={sharedNewsId}
               />
             ) : (
-              <MembershipPage
-                userName={currentUser.name}
-                userEmail={currentUser.email}
+              <MemberOnlyPage
+                type="news"
+                onBecomeMember={() =>
+                  setPage('membership')
+                }
               />
             ))}
 
@@ -687,9 +690,11 @@ const [adminOpen, setAdminOpen] = useState(false)
             (canAccessKiddush ? (
               <KiddushPage />
             ) : (
-              <MembershipPage
-                userName={currentUser.name}
-                userEmail={currentUser.email}
+              <MemberOnlyPage
+                type="kiddush"
+                onBecomeMember={() =>
+                  setPage('membership')
+                }
               />
             ))}
 

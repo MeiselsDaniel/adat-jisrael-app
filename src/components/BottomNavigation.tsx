@@ -195,7 +195,7 @@ function BottomNavigation({
 
   if (!isMember) {
     return (
-      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-slate-200 bg-white/95 px-3 pt-2 backdrop-blur [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
+      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-6 border-t border-slate-200 bg-white/95 px-3 pt-2 backdrop-blur [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
         <NavButton
           active={page === 'home'}
           label="Hem"
@@ -216,8 +216,22 @@ function BottomNavigation({
         />
 
         <NavButton
+          active={page === 'information'}
+          label="Nyheter 🔒"
+          icon={<Newspaper className="h-5 w-5" />}
+          onClick={() => setPage('information')}
+        />
+
+        <NavButton
+          active={page === 'kiddush'}
+          label="Kiddush 🔒"
+          icon={<Wine className="h-5 w-5" />}
+          onClick={() => setPage('kiddush')}
+        />
+
+        <NavButton
           active={page === 'membership'}
-          label="Medlemskap"
+          label="Bli medlem"
           icon={<UserPlus className="h-5 w-5" />}
           onClick={() => setPage('membership')}
         />
