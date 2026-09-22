@@ -61,6 +61,12 @@ type UserFilter =
   | 'approved'
   | 'blocked'
 
+type ActiveUserFilter =
+  | 'all'
+  | 'member'
+  | 'guest'
+  | 'sponsor'
+
 function AdminPage({
   onBack,
   onCreateEvent,
@@ -82,6 +88,11 @@ function AdminPage({
 
   const [filter, setFilter] =
     useState<UserFilter>('pending')
+
+  const [
+    activeUserFilter,
+    setActiveUserFilter,
+  ] = useState<ActiveUserFilter>('all')
 
   const [loading, setLoading] =
     useState(true)
@@ -245,6 +256,34 @@ useEffect(() => {
     [users],
   )
 
+  const activeMembers = useMemo(
+    () =>
+      approvedUsers.filter(
+        (user) => user.role === 'member',
+      ),
+    [approvedUsers],
+  )
+
+  const activeGuests = useMemo(
+    () =>
+      approvedUsers.filter(
+        (user) =>
+          user.role === 'guest' &&
+          !user.isSponsor,
+      ),
+    [approvedUsers],
+  )
+
+  const activeSponsors = useMemo(
+    () =>
+      approvedUsers.filter(
+        (user) =>
+          user.role === 'guest' &&
+          user.isSponsor === true,
+      ),
+    [approvedUsers],
+  )
+
   const filteredUsers = useMemo(() => {
     switch (filter) {
       case 'pending':
@@ -255,13 +294,30 @@ useEffect(() => {
 
       case 'approved':
       default:
-        return approvedUsers
+        switch (activeUserFilter) {
+          case 'member':
+            return activeMembers
+
+          case 'guest':
+            return activeGuests
+
+          case 'sponsor':
+            return activeSponsors
+
+          case 'all':
+          default:
+            return approvedUsers
+        }
     }
   }, [
     filter,
+    activeUserFilter,
     pendingUsers,
     approvedUsers,
     blockedUsers,
+    activeMembers,
+    activeGuests,
+    activeSponsors,
   ])
 
   async function handleMembershipApplicationStatus(
@@ -610,6 +666,46 @@ useEffect(() => {
                 }
               />
             </div>
+
+            {filter === 'approved' && (
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                <ActiveFilterButton
+                  label="Alla"
+                  count={approvedUsers.length}
+                  active={activeUserFilter === 'all'}
+                  onClick={() =>
+                    setActiveUserFilter('all')
+                  }
+                />
+
+                <ActiveFilterButton
+                  label="Medlemmar"
+                  count={activeMembers.length}
+                  active={activeUserFilter === 'member'}
+                  onClick={() =>
+                    setActiveUserFilter('member')
+                  }
+                />
+
+                <ActiveFilterButton
+                  label="Gäster"
+                  count={activeGuests.length}
+                  active={activeUserFilter === 'guest'}
+                  onClick={() =>
+                    setActiveUserFilter('guest')
+                  }
+                />
+
+                <ActiveFilterButton
+                  label="Sponsorer"
+                  count={activeSponsors.length}
+                  active={activeUserFilter === 'sponsor'}
+                  onClick={() =>
+                    setActiveUserFilter('sponsor')
+                  }
+                />
+              </div>
+            )}
 
             {error && (
               <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold leading-6 text-rose-800">
@@ -1481,6 +1577,41 @@ function StatusBadge({
     >
       {labels[status]}
     </span>
+  )
+}
+
+function ActiveFilterButton({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string
+  count: number
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl px-2 py-2 text-xs font-bold transition ${
+        active
+          ? 'bg-[#183b70] text-white shadow-sm'
+          : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+      }`}
+    >
+      <span className="block">{label}</span>
+      <span
+        className={`mt-0.5 block text-[10px] ${
+          active
+            ? 'text-white/75'
+            : 'text-slate-400'
+        }`}
+      >
+        {count}
+      </span>
+    </button>
   )
 }
 
