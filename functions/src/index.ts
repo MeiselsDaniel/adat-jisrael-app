@@ -619,16 +619,65 @@ export const sendMinyanNeedPush =
           .doc(tefilaId)
           .get();
 
-      if (!tefilaSnapshot.exists) {
-        throw new HttpsError(
-          "not-found",
-          "Tfilan finns inte.",
-        );
-      }
+      let tefila: TefilaData;
 
-      const tefila =
-        tefilaSnapshot.data() as
-          TefilaData;
+      if (tefilaSnapshot.exists) {
+        tefila =
+          tefilaSnapshot.data() as
+            TefilaData;
+      } else {
+        /*
+         * Vanlig Shacharit genereras lokalt i appen
+         * och behöver därför inte ha ett eget
+         * parent-dokument i Firestore. Anmälningar
+         * kan ändå finnas i registrations.
+         */
+        const standardShacharitMatch =
+          tefilaId.match(
+            /^(\d{4}-\d{2}-\d{2})-shacharit$/,
+          );
+
+        if (!standardShacharitMatch) {
+          throw new HttpsError(
+            "not-found",
+            "Tfilan finns inte.",
+          );
+        }
+
+        const date =
+          standardShacharitMatch[1];
+
+        const parsedDate =
+          new Date(`${date}T12:00:00Z`);
+
+        if (
+          Number.isNaN(
+            parsedDate.getTime(),
+          )
+        ) {
+          throw new HttpsError(
+            "not-found",
+            "Tfilan finns inte.",
+          );
+        }
+
+        const isSunday =
+          parsedDate.getUTCDay() === 0;
+
+        /*
+         * Samma standardtider som i
+         * src/data/settings.ts.
+         */
+        tefila = {
+          id: tefilaId,
+          title: "Shacharit",
+          date,
+          time: isSunday
+            ? "08.15"
+            : "07.30",
+          status: "scheduled",
+        };
+      }
 
       if (
         tefila.status === "cancelled"
