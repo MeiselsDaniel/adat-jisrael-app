@@ -128,6 +128,8 @@ function TefilaManagerPage({
                 record.time,
                 kind:
                   record.kind,
+                holidayName:
+                  record.holidayName,
                 allowRegistration:
                   record.allowRegistration,
               dateValue:
@@ -177,9 +179,11 @@ function TefilaManagerPage({
                   record.title,
                 time:
                   record.time,
-                attending: 0,
                 kind:
                   record.kind,
+                holidayName:
+                  record.holidayName,
+                attending: 0,
                 allowRegistration:
                   record.allowRegistration,
               }
@@ -244,6 +248,11 @@ function TefilaManagerPage({
 
   const [draftTitle, setDraftTitle] =
     useState('')
+
+  const [
+    draftHolidayName,
+    setDraftHolidayName,
+  ] = useState('')
 
   const [savingId, setSavingId] =
     useState<string | null>(null)
@@ -484,6 +493,10 @@ function TefilaManagerPage({
       tefila.title,
     )
 
+    setDraftHolidayName(
+      tefila.holidayName ?? '',
+    )
+
     setError('')
   }
 
@@ -529,6 +542,9 @@ function TefilaManagerPage({
         time: normalizedTime,
         status: 'scheduled',
         allowRegistration: true,
+        holidayName:
+          draftHolidayName.trim() ||
+          undefined,
       }
 
       await saveTefila(record)
@@ -735,6 +751,29 @@ function TefilaManagerPage({
                           </div>
                         )}
 
+                        <label className="mb-4 block">
+                          <span className="text-sm font-bold text-slate-700">
+                            Högtidsnamn för denna tfila
+                          </span>
+
+                          <input
+                            type="text"
+                            value={draftHolidayName}
+                            onChange={(event) =>
+                              setDraftHolidayName(
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Exempel: Simchat Tora"
+                            className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-600"
+                          />
+
+                          <p className="mt-2 text-xs leading-5 text-slate-500">
+                            Valfritt. Lämna tomt för att använda
+                            dagens högtidsnamn.
+                          </p>
+                        </label>
+
                         <label className="block">
                           <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
                             <Clock3 className="h-4 w-4" />
@@ -810,7 +849,7 @@ function TefilaManagerPage({
                         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[#183b70] shadow-sm ring-1 ring-slate-200"
                       >
                         <Pencil className="h-4 w-4" />
-                        Ändra tid för denna tfilah
+                        Redigera denna tfilah
                       </button>
 
                         {isManualTefila(tefila) && (

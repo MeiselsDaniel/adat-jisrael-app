@@ -218,6 +218,7 @@ export type Tefila = {
    */
   attending?: number
   kind?: 'regular' | 'erevHoliday' | 'holiday'
+  holidayName?: string
 
   allowRegistration?: boolean
 }

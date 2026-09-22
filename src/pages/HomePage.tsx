@@ -1294,6 +1294,10 @@ function convertTefilaRecord(
       formatSwedishDate(date),
     title: record.title,
     time: record.time,
+    kind: record.kind ?? existing?.kind,
+    holidayName:
+      record.holidayName ??
+      existing?.holidayName,
     attending:
       existing?.attending ?? 0,
   }

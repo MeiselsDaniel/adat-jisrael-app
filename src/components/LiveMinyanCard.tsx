@@ -177,6 +177,7 @@ function LiveMinyanCard({
         : tefila.kind
 
   const rawHolidayName =
+    tefila.holidayName?.trim() ||
     daySettings?.holidayName?.trim() ||
     hebcalInfo?.holidayNames?.[0] ||
     ''
@@ -215,6 +216,17 @@ function LiveMinyanCard({
       )
     })
 
+  const hoshanaRabaHoliday =
+    hebcalHolidayNames.find((name) => {
+      const normalized =
+        name.toLowerCase()
+
+      return (
+        normalized.includes('hoshana') &&
+        normalized.includes('raba')
+      )
+    })
+
   const chanukahHoliday =
     hebcalHolidayNames.find((name) => {
       const normalized =
@@ -247,13 +259,15 @@ function LiveMinyanCard({
   const minorDayLabel =
     effectiveHolidayKind !== 'holiday' &&
     effectiveHolidayKind !== 'erevHoliday'
-      ? cholHamoedHoliday
-        ? cholHamoedHoliday
-            .toLowerCase()
-            .includes('pesach')
-          ? 'Chol Hamoed · Pesach'
-          : 'Chol Hamoed · Sukkot'
-        : chanukahHoliday
+      ? hoshanaRabaHoliday
+        ? 'Hoshana Raba · Sukkot'
+        : cholHamoedHoliday
+          ? cholHamoedHoliday
+              .toLowerCase()
+              .includes('pesach')
+            ? 'Chol Hamoed · Pesach'
+            : 'Chol Hamoed · Sukkot'
+          : chanukahHoliday
           ? 'Chanukka'
           : fastHoliday
             ? `Fastedag · ${
