@@ -28,8 +28,10 @@ import {
 
 import {
   countEventParticipants,
+  deleteEventRegistration,
   saveAdminEventRegistration,
   subscribeToEventRegistrations,
+  updateEventRegistration,
   updateEventRegistrationPaid,
   type StoredEventRegistration,
 } from '../services/eventRegistrationService'
@@ -407,6 +409,46 @@ function EventAdminCard({
     setAddingParticipant,
   ] = useState(false)
 
+  const [
+    editingRegistrationId,
+    setEditingRegistrationId,
+  ] = useState<string | null>(null)
+
+  const [
+    editUserName,
+    setEditUserName,
+  ] = useState('')
+
+  const [
+    editPartySize,
+    setEditPartySize,
+  ] = useState(1)
+
+  const [
+    editMemberCount,
+    setEditMemberCount,
+  ] = useState(0)
+
+  const [
+    editNonMemberCount,
+    setEditNonMemberCount,
+  ] = useState(1)
+
+  const [
+    editParticipantNames,
+    setEditParticipantNames,
+  ] = useState<string[]>([])
+
+  const [
+    savingRegistrationId,
+    setSavingRegistrationId,
+  ] = useState<string | null>(null)
+
+  const [
+    deletingRegistrationId,
+    setDeletingRegistrationId,
+  ] = useState<string | null>(null)
+
   useEffect(() => {
     if (!addParticipantOpen) {
       return
@@ -522,7 +564,10 @@ function EventAdminCard({
           userId: selectedUser.uid,
           userName: selectedUser.name,
           isMember:
-            selectedUser.role === 'member',
+            selectedUser.role === 'member' ||
+            selectedUser.role === 'gabbai' ||
+            selectedUser.role === 'admin' ||
+            selectedUser.isSponsor === true,
         })
       } else {
         const name =
@@ -558,6 +603,195 @@ function EventAdminCard({
       )
     } finally {
       setAddingParticipant(false)
+    }
+  }
+
+  function startEditingRegistration(
+    registration: StoredEventRegistration,
+  ) {
+    const partySize =
+      Math.max(1, registration.partySize ?? 1)
+
+    const memberCount =
+      Math.max(
+        0,
+        registration.memberCount ?? 0,
+      )
+
+    const nonMemberCount =
+      Math.max(
+        0,
+        registration.nonMemberCount ??
+          Math.max(0, partySize - memberCount),
+      )
+
+    const existingNames =
+      registration.participantNames
+        ?.filter(Boolean) ?? []
+
+    setEditingRegistrationId(
+      registration.id,
+    )
+
+    setEditUserName(
+      registration.userName ?? '',
+    )
+
+    setEditPartySize(partySize)
+    setEditMemberCount(memberCount)
+    setEditNonMemberCount(nonMemberCount)
+
+    setEditParticipantNames(
+      Array.from(
+        { length: partySize },
+        (_, index) =>
+          existingNames[index] ?? '',
+      ),
+    )
+  }
+
+  function cancelEditingRegistration() {
+    setEditingRegistrationId(null)
+    setEditUserName('')
+    setEditPartySize(1)
+    setEditMemberCount(0)
+    setEditNonMemberCount(1)
+    setEditParticipantNames([])
+  }
+
+  function changeEditPartySize(
+    nextPartySize: number,
+  ) {
+    const partySize =
+      Math.max(1, nextPartySize)
+
+    setEditPartySize(partySize)
+
+    setEditParticipantNames(
+      (current) =>
+        Array.from(
+          { length: partySize },
+          (_, index) =>
+            current[index] ?? '',
+        ),
+    )
+
+    setEditMemberCount(
+      (current) =>
+        Math.min(current, partySize),
+    )
+
+    setEditNonMemberCount(
+      (current) =>
+        Math.min(
+          current,
+          partySize,
+        ),
+    )
+  }
+
+  async function handleSaveRegistration(
+    registration: StoredEventRegistration,
+  ) {
+    if (savingRegistrationId) {
+      return
+    }
+
+    const userName =
+      editUserName.trim()
+
+    if (!userName) {
+      window.alert(
+        'Anmälan måste ha ett namn.',
+      )
+      return
+    }
+
+    if (
+      editMemberCount +
+        editNonMemberCount !==
+      editPartySize
+    ) {
+      window.alert(
+        'Antalet medlemmar och icke-medlemmar måste tillsammans vara samma som antalet personer.',
+      )
+      return
+    }
+
+    try {
+      setSavingRegistrationId(
+        registration.id,
+      )
+
+      await updateEventRegistration({
+        eventId: event.id,
+        userId: registration.userId,
+        userName,
+        partySize: editPartySize,
+        memberCount: editMemberCount,
+        nonMemberCount:
+          editNonMemberCount,
+        participantNames:
+          editParticipantNames,
+      })
+
+      cancelEditingRegistration()
+    } catch (error) {
+      console.error(
+        'Kunde inte redigera anmälan:',
+        error,
+      )
+
+      window.alert(
+        'Anmälan kunde inte sparas.',
+      )
+    } finally {
+      setSavingRegistrationId(null)
+    }
+  }
+
+  async function handleDeleteRegistration(
+    registration: StoredEventRegistration,
+  ) {
+    const confirmed =
+      window.confirm(
+        `Vill du ta bort anmälan för “${
+          registration.userName ||
+          'Namnlös anmälan'
+        }”?`,
+      )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      setDeletingRegistrationId(
+        registration.id,
+      )
+
+      await deleteEventRegistration(
+        event.id,
+        registration.userId,
+      )
+
+      if (
+        editingRegistrationId ===
+        registration.id
+      ) {
+        cancelEditingRegistration()
+      }
+    } catch (error) {
+      console.error(
+        'Kunde inte ta bort anmälan:',
+        error,
+      )
+
+      window.alert(
+        'Anmälan kunde inte tas bort.',
+      )
+    } finally {
+      setDeletingRegistrationId(null)
     }
   }
 
@@ -978,6 +1212,210 @@ function EventAdminCard({
                                     : 'Ej betald'}
                               </span>
                             </label>
+
+                            {editingRegistrationId ===
+                            registration.id ? (
+                              <div className="mt-3 space-y-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                                <div>
+                                  <label className="text-xs font-bold text-slate-600">
+                                    Namn på anmälan
+                                  </label>
+
+                                  <input
+                                    type="text"
+                                    value={editUserName}
+                                    onChange={(event) =>
+                                      setEditUserName(
+                                        event.target.value,
+                                      )
+                                    }
+                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="text-xs font-bold text-slate-600">
+                                    Antal personer
+                                  </label>
+
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={editPartySize}
+                                    onChange={(event) =>
+                                      changeEditPartySize(
+                                        Number(
+                                          event.target.value,
+                                        ) || 1,
+                                      )
+                                    }
+                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-xs font-bold text-slate-600">
+                                      Medlemmar
+                                    </label>
+
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={editPartySize}
+                                      value={editMemberCount}
+                                      onChange={(event) =>
+                                        setEditMemberCount(
+                                          Math.max(
+                                            0,
+                                            Number(
+                                              event.target.value,
+                                            ) || 0,
+                                          ),
+                                        )
+                                      }
+                                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-xs font-bold text-slate-600">
+                                      Icke-medlemmar
+                                    </label>
+
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={editPartySize}
+                                      value={
+                                        editNonMemberCount
+                                      }
+                                      onChange={(event) =>
+                                        setEditNonMemberCount(
+                                          Math.max(
+                                            0,
+                                            Number(
+                                              event.target.value,
+                                            ) || 0,
+                                          ),
+                                        )
+                                      }
+                                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <p className="text-xs font-bold text-slate-600">
+                                    Namn på deltagarna
+                                  </p>
+
+                                  <div className="mt-2 space-y-2">
+                                    {editParticipantNames.map(
+                                      (name, index) => (
+                                        <input
+                                          key={index}
+                                          type="text"
+                                          value={name}
+                                          onChange={(event) => {
+                                            const value =
+                                              event.target.value
+
+                                            setEditParticipantNames(
+                                              (current) =>
+                                                current.map(
+                                                  (
+                                                    currentName,
+                                                    currentIndex,
+                                                  ) =>
+                                                    currentIndex ===
+                                                    index
+                                                      ? value
+                                                      : currentName,
+                                                ),
+                                            )
+                                          }}
+                                          placeholder={`Person ${
+                                            index + 1
+                                          }`}
+                                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
+                                        />
+                                      ),
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      savingRegistrationId ===
+                                      registration.id
+                                    }
+                                    onClick={
+                                      cancelEditingRegistration
+                                    }
+                                    className="rounded-xl bg-white px-3 py-2.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200 disabled:opacity-60"
+                                  >
+                                    Avbryt
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      savingRegistrationId ===
+                                      registration.id
+                                    }
+                                    onClick={() => {
+                                      void handleSaveRegistration(
+                                        registration,
+                                      )
+                                    }}
+                                    className="rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-60"
+                                  >
+                                    {savingRegistrationId ===
+                                    registration.id
+                                      ? 'Sparar…'
+                                      : 'Spara'}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mt-2 grid grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    startEditingRegistration(
+                                      registration,
+                                    )
+                                  }
+                                  className="flex items-center justify-center gap-2 rounded-xl bg-sky-50 px-3 py-2.5 text-xs font-bold text-[#183b70] ring-1 ring-sky-200"
+                                >
+                                  <FilePenLine className="h-4 w-4" />
+                                  Redigera
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={
+                                    deletingRegistrationId ===
+                                    registration.id
+                                  }
+                                  onClick={() => {
+                                    void handleDeleteRegistration(
+                                      registration,
+                                    )
+                                  }}
+                                  className="flex items-center justify-center gap-2 rounded-xl bg-rose-50 px-3 py-2.5 text-xs font-bold text-rose-700 ring-1 ring-rose-200 disabled:opacity-60"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  {deletingRegistrationId ===
+                                  registration.id
+                                    ? 'Tar bort…'
+                                    : 'Ta bort'}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )
                       },

@@ -77,7 +77,16 @@ function Header({
           className="h-14 w-auto object-contain"
         />
 
-        {page !== 'home' && (
+        {page === 'home' ? (
+          <div className="shrink-0 text-right">
+            <p className="text-xs font-medium text-slate-400">
+              Stöd oss
+            </p>
+            <p className="mt-0.5 text-sm font-bold text-[#183b70]">
+              Swish 123 237 05 75
+            </p>
+          </div>
+        ) : (
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
               Adat Jisrael

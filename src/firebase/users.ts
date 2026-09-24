@@ -20,6 +20,7 @@ import { db } from './config'
 export type FirebaseUserRole =
   | 'guest'
   | 'member'
+  | 'gabbai'
   | 'admin'
 
 export type FirebaseUserStatus =
@@ -209,6 +210,15 @@ export async function approveUserAsMember(
 ): Promise<void> {
   await updateUserProfile(uid, {
     role: 'member',
+    status: 'approved',
+  })
+}
+
+export async function makeUserGabbai(
+  uid: string,
+): Promise<void> {
+  await updateUserProfile(uid, {
+    role: 'gabbai',
     status: 'approved',
   })
 }

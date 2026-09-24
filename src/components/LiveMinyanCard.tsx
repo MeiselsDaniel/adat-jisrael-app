@@ -109,9 +109,17 @@ function LiveMinyanCard({
     profile?.name,
   )
 
+  /*
+   * Admin och Gabbai sköter den praktiska minjanhanteringen:
+   * - ställa in / återaktivera tfilan
+   * - bekräfta om det blev minjan
+   * - registrera faktiskt antal närvarande
+   *
+   * Detta ska fungera även på startsidan.
+   */
   const canManage =
-    showAdminControls &&
-    profile?.role === 'admin'
+    profile?.role === 'admin' ||
+    profile?.role === 'gabbai'
 
   const isHolidayWithoutRegistration =
     daySettings?.dayType === 'holiday' ||
@@ -449,6 +457,7 @@ loading={loading}
         record?.actualAttendance
       }
       canManage={canManage}
+      tefilaId={tefilaId}
       canRegister={canRegisterForMinyan}
       extraInfo={displayedExtraInfo}
       holidayLabel={
@@ -482,7 +491,7 @@ loading={loading}
       onConfirm={saveMinyanResult}
     />
 
-      {canManage &&
+      {profile?.role === 'admin' &&
         registrationAllowed &&
         record?.status !== 'cancelled' &&
         peopleNeeded > 0 && (

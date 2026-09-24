@@ -1084,7 +1084,7 @@ function RichEventCard({
           </div>
         )}
 
-        {myRegistration &&
+{myRegistration &&
           totalPrice !== undefined &&
           totalPrice > 0 &&
           event.swishNumber && (

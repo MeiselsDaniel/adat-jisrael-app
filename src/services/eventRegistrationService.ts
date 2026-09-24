@@ -115,6 +115,44 @@ export async function saveAdminEventRegistration(input: {
   })
 }
 
+export async function updateEventRegistration(
+  input: {
+    eventId: string
+    userId: string
+    userName: string
+    partySize: number
+    memberCount: number
+    nonMemberCount: number
+    participantNames: string[]
+  },
+): Promise<void> {
+  const registrationId =
+    `${input.eventId}__${input.userId}`
+
+  await updateDoc(
+    doc(
+      db,
+      'eventRegistrations',
+      registrationId,
+    ),
+    {
+      userName:
+        input.userName.trim() || null,
+      partySize:
+        Math.max(1, input.partySize),
+      memberCount:
+        Math.max(0, input.memberCount),
+      nonMemberCount:
+        Math.max(0, input.nonMemberCount),
+      participantNames:
+        input.participantNames
+          .map((name) => name.trim())
+          .filter(Boolean),
+      updatedAt: serverTimestamp(),
+    },
+  )
+}
+
 export async function updateEventRegistrationPaid(
   registrationId: string,
   paid: boolean,

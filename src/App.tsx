@@ -795,6 +795,7 @@ function getCategoryForRole(
     case 'admin':
       return 'board'
 
+    case 'gabbai':
     case 'member':
       return 'member'
 

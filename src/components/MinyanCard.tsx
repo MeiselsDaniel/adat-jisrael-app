@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import MinyanRegistrationManager from './MinyanRegistrationManager'
 import {
   Check,
   ChevronDown,
@@ -33,6 +34,7 @@ type MinyanCardProps = {
   minyanResult?: MinyanResult
   actualAttendance?: number
   canManage?: boolean
+  tefilaId?: string
   extraInfo?: {
     label: string
     value: string
@@ -68,6 +70,7 @@ function MinyanCard({
   minyanResult,
   actualAttendance,
   canManage = false,
+  tefilaId,
   extraInfo,
   holidayLabel,
   sermon,
@@ -572,6 +575,112 @@ function MinyanCard({
       )}
 
 
+      {canManage && (
+        <div className="border-t border-slate-100 px-4 pb-4 pt-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setAdminOpen(
+                    (current) => !current,
+                  )
+                }
+                className="flex w-full items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[#183b70] ring-1 ring-slate-200"
+              >
+                <span className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  Hantera minjan
+                </span>
+
+                {adminOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
+
+              {adminOpen && (
+                <div className="mt-3 space-y-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                  {tefilaId && (
+                    <MinyanRegistrationManager
+                      tefilaId={tefilaId}
+                      registrations={registrations}
+                    />
+                  )}
+
+                  <label className="block">
+                    <span className="text-sm font-bold text-slate-700">
+                      Faktiskt antal närvarande
+                    </span>
+
+                    <input
+                      type="number"
+                      min={0}
+                      value={
+                        draftActualAttendance
+                      }
+                      onChange={(event) =>
+                        setDraftActualAttendance(
+                          event.target.value === ''
+                            ? ''
+                            : Math.max(
+                                0,
+                                Number(
+                                  event.target.value,
+                                ),
+                              ),
+                        )
+                      }
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-600"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => {
+                        void handleConfirm(
+                          'confirmed',
+                        )
+                      }}
+                      className="rounded-2xl bg-emerald-600 px-3 py-3 text-sm font-bold text-white disabled:opacity-60"
+                    >
+                      Det blev minjan
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => {
+                        void handleConfirm(
+                          'notConfirmed',
+                        )
+                      }}
+                      className="rounded-2xl bg-amber-100 px-3 py-3 text-sm font-bold text-amber-900 disabled:opacity-60"
+                    >
+                      Ingen minjan
+                    </button>
+                  </div>
+
+                  {onCancel && (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => {
+                        void handleCancel()
+                      }}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800 disabled:opacity-60"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Ställ in tfilan
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+
       {detailsOpen && registrationEnabled && (
         <div className="border-t border-slate-100 bg-slate-50 px-4 py-4">
           <div className="flex items-center gap-2">
@@ -651,103 +760,7 @@ function MinyanCard({
               )}
           </div>
 
-          {canManage && (
-            <div className="mt-4 border-t border-slate-200 pt-4">
-              <button
-                type="button"
-                onClick={() =>
-                  setAdminOpen(
-                    (current) => !current,
-                  )
-                }
-                className="flex w-full items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[#183b70] ring-1 ring-slate-200"
-              >
-                <span className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
-                  Hantera minjan
-                </span>
 
-                {adminOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </button>
-
-              {adminOpen && (
-                <div className="mt-3 space-y-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                  <label className="block">
-                    <span className="text-sm font-bold text-slate-700">
-                      Faktiskt antal närvarande
-                    </span>
-
-                    <input
-                      type="number"
-                      min={0}
-                      value={
-                        draftActualAttendance
-                      }
-                      onChange={(event) =>
-                        setDraftActualAttendance(
-                          event.target.value === ''
-                            ? ''
-                            : Math.max(
-                                0,
-                                Number(
-                                  event.target.value,
-                                ),
-                              ),
-                        )
-                      }
-                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-600"
-                    />
-                  </label>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={() => {
-                        void handleConfirm(
-                          'confirmed',
-                        )
-                      }}
-                      className="rounded-2xl bg-emerald-600 px-3 py-3 text-sm font-bold text-white disabled:opacity-60"
-                    >
-                      Det blev minjan
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={() => {
-                        void handleConfirm(
-                          'notConfirmed',
-                        )
-                      }}
-                      className="rounded-2xl bg-amber-100 px-3 py-3 text-sm font-bold text-amber-900 disabled:opacity-60"
-                    >
-                      Ingen minjan
-                    </button>
-                  </div>
-
-                  {onCancel && (
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={() => {
-                        void handleCancel()
-                      }}
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800 disabled:opacity-60"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Ställ in tfilan
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 

@@ -1541,6 +1541,7 @@ function RoleBadge({
   > = {
     guest: 'Gäst',
     member: 'Medlem',
+    gabbai: 'Gabbai',
     admin: 'Administratör',
   }
 

@@ -357,6 +357,40 @@ export async function updateRegistrationGuests(
   )
 }
 
+export async function setRegistrationAttending(
+  tefilaId: string,
+  userId: string,
+  attending: boolean,
+): Promise<void> {
+  await updateDoc(
+    doc(db, 'tfilot', tefilaId, 'registrations', userId),
+    {
+      attending,
+      updatedAt: serverTimestamp(),
+    },
+  )
+}
+
+export async function setRegistrationGuestNames(
+  tefilaId: string,
+  userId: string,
+  guestNames: string[],
+): Promise<void> {
+  const normalized = guestNames
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .slice(0, 50)
+
+  await updateDoc(
+    doc(db, 'tfilot', tefilaId, 'registrations', userId),
+    {
+      guestNames: normalized,
+      guestCount: normalized.length,
+      updatedAt: serverTimestamp(),
+    },
+  )
+}
+
 export async function removeRegistration(
   tefilaId: string,
   userId: string,
