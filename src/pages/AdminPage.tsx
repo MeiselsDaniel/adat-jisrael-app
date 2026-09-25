@@ -62,8 +62,8 @@ type UserFilter =
   | 'blocked'
 
 type ActiveUserFilter =
-  | 'all'
   | 'member'
+  | 'gabbai'
   | 'guest'
   | 'sponsor'
 
@@ -92,7 +92,7 @@ function AdminPage({
   const [
     activeUserFilter,
     setActiveUserFilter,
-  ] = useState<ActiveUserFilter>('all')
+  ] = useState<ActiveUserFilter>('member')
 
   const [loading, setLoading] =
     useState(true)
@@ -259,7 +259,17 @@ useEffect(() => {
   const activeMembers = useMemo(
     () =>
       approvedUsers.filter(
-        (user) => user.role === 'member',
+        (user) =>
+          user.role === 'member' ||
+          user.role === 'gabbai',
+      ),
+    [approvedUsers],
+  )
+
+  const activeGabbaim = useMemo(
+    () =>
+      approvedUsers.filter(
+        (user) => user.role === 'gabbai',
       ),
     [approvedUsers],
   )
@@ -298,15 +308,17 @@ useEffect(() => {
           case 'member':
             return activeMembers
 
+          case 'gabbai':
+            return activeGabbaim
+
           case 'guest':
             return activeGuests
 
           case 'sponsor':
             return activeSponsors
 
-          case 'all':
           default:
-            return approvedUsers
+            return activeMembers
         }
     }
   }, [
@@ -316,6 +328,7 @@ useEffect(() => {
     approvedUsers,
     blockedUsers,
     activeMembers,
+    activeGabbaim,
     activeGuests,
     activeSponsors,
   ])
@@ -670,20 +683,20 @@ useEffect(() => {
             {filter === 'approved' && (
               <div className="mt-3 grid grid-cols-4 gap-2">
                 <ActiveFilterButton
-                  label="Alla"
-                  count={approvedUsers.length}
-                  active={activeUserFilter === 'all'}
-                  onClick={() =>
-                    setActiveUserFilter('all')
-                  }
-                />
-
-                <ActiveFilterButton
                   label="Medlemmar"
                   count={activeMembers.length}
                   active={activeUserFilter === 'member'}
                   onClick={() =>
                     setActiveUserFilter('member')
+                  }
+                />
+
+                <ActiveFilterButton
+                  label="Gabbaim"
+                  count={activeGabbaim.length}
+                  active={activeUserFilter === 'gabbai'}
+                  onClick={() =>
+                    setActiveUserFilter('gabbai')
                   }
                 />
 
@@ -1436,7 +1449,7 @@ function UserAdminCard({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <RoleButton
                   label="Gäst"
                   active={user.role === 'guest'}
@@ -1452,6 +1465,15 @@ function UserAdminCard({
                   disabled={saving}
                   onClick={() =>
                     onChangeRole('member')
+                  }
+                />
+
+                <RoleButton
+                  label="Gabbai"
+                  active={user.role === 'gabbai'}
+                  disabled={saving}
+                  onClick={() =>
+                    onChangeRole('gabbai')
                   }
                 />
               </div>

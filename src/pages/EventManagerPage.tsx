@@ -1014,11 +1014,15 @@ function EventAdminCard({
                                 value={user.uid}
                               >
                                 {user.name} ·{' '}
-                                {user.role === 'member'
-                                  ? 'Medlem'
-                                  : user.isSponsor
-                                    ? 'Sponsor'
-                                    : 'Gäst'}
+                                {user.role === 'admin'
+                                  ? 'Administratör'
+                                  : user.role === 'gabbai'
+                                    ? 'Gabbai'
+                                    : user.role === 'member'
+                                      ? 'Medlem'
+                                      : user.isSponsor
+                                        ? 'Sponsor'
+                                        : 'Gäst'}
                               </option>
                             ),
                           )}

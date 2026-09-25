@@ -76,6 +76,7 @@ function CalendarPage({
     profile?.status === 'approved' &&
     (
       profile.role === 'member' ||
+      profile.role === 'gabbai' ||
       profile.role === 'admin'
     )
 
