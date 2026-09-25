@@ -428,7 +428,7 @@ function LiveMinyanCard({
   }
 
   return (
-    <>
+    <div>
       <MinyanCard
       tefila={{
         ...displayedTefila,
@@ -518,7 +518,7 @@ loading={loading}
             )}
           </div>
         )}
-    </>
+    </div>
   )
 }
 

@@ -805,14 +805,32 @@ function HomeTefilaCard({
 
   const jahrzeitNames =
     Array.from(
-      new Set(
-        relevantJahrzeits.map(
-          (jahrzeit) =>
+      relevantJahrzeits.reduce(
+        (names, jahrzeit) => {
+          const displayName =
             jahrzeit.hebrewName?.trim() ||
-            jahrzeit.deceasedName.trim(),
-        ),
-      ),
-    ).filter(Boolean)
+            jahrzeit.deceasedName.trim()
+
+          const normalizedName =
+            displayName
+              .replace(/\\s+/g, ' ')
+              .toLocaleLowerCase('sv-SE')
+
+          if (
+            displayName &&
+            !names.has(normalizedName)
+          ) {
+            names.set(
+              normalizedName,
+              displayName,
+            )
+          }
+
+          return names
+        },
+        new Map<string, string>(),
+      ).values(),
+    )
 
   const jahrzeitInfo =
     jahrzeitNames.length > 0
