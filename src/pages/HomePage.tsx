@@ -1,6 +1,5 @@
 import {
   Heart,
-  Star,
 } from 'lucide-react'
 import {
   useEffect,
@@ -483,24 +482,27 @@ useEffect(() => {
         pinnedMessage.active &&
         formatDateValue(now) >= pinnedMessage.startDate &&
         formatDateValue(now) <= pinnedMessage.endDate && (
-          <section className="rounded-3xl bg-amber-50 p-5 shadow-sm ring-1 ring-amber-200">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-700 shadow-sm">
-                <Star className="h-6 w-6" />
-              </div>
+          <section className="rounded-3xl bg-amber-50 px-5 py-3 shadow-sm ring-1 ring-amber-200">
+            <div className="flex items-start">
 
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
-                  {pinnedMessage.type === 'mazelTov'
-                    ? 'Mazel tov!'
-                    : pinnedMessage.type === 'important'
-                      ? 'Viktig information'
-                      : pinnedMessage.type === 'fundraiser'
-                        ? 'Insamling'
-                        : 'Meddelande'}
-                </p>
+                {pinnedMessage.type !== 'general' && (
+                  <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+                    {pinnedMessage.type === 'mazelTov'
+                      ? 'Mazel tov!'
+                      : pinnedMessage.type === 'important'
+                        ? 'Viktig information'
+                        : pinnedMessage.type === 'fundraiser'
+                          ? 'Insamling'
+                          : null}
+                  </p>
+                )}
 
-                <p className="mt-2 whitespace-pre-line text-base font-semibold leading-7 text-slate-800">
+                <p
+                  className={`whitespace-pre-line text-base font-semibold leading-7 text-slate-800 ${
+                    pinnedMessage.type !== 'general' ? 'mt-2' : ''
+                  }`}
+                >
                   {pinnedMessage.text}
                 </p>
               </div>
