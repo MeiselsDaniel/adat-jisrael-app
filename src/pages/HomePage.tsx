@@ -489,7 +489,7 @@ useEffect(() => {
                 {pinnedMessage.type !== 'general' && (
                   <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
                     {pinnedMessage.type === 'mazelTov'
-                      ? 'Mazel tov!'
+                      ? 'Mazel tov! 🎉'
                       : pinnedMessage.type === 'important'
                         ? 'Viktig information'
                         : pinnedMessage.type === 'fundraiser'
