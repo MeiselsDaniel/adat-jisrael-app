@@ -447,15 +447,31 @@ useEffect(() => {
           thirdKabbalatShabbat.firestoreId,
     )
 
-  const specialTfilotOnSecondShabbat =
+  const specialTfilotOnShabbat = (
+    dateValue: string,
+  ) =>
     mergedTfilot.filter(
       (tefila) =>
-        tefila.dateValue ===
-          secondSaturdayDateValue &&
+        tefila.dateValue === dateValue &&
         (
           tefila.kind === 'holiday' ||
           tefila.kind === 'erevHoliday'
         ),
+    )
+
+  const specialTfilotOnFirstShabbat =
+    specialTfilotOnShabbat(
+      saturdayDateValue,
+    )
+
+  const specialTfilotOnSecondShabbat =
+    specialTfilotOnShabbat(
+      secondSaturdayDateValue,
+    )
+
+  const specialTfilotOnThirdShabbat =
+    specialTfilotOnShabbat(
+      thirdSaturdayDateValue,
     )
 
   const itemsBeforeShabbat =
@@ -549,6 +565,20 @@ useEffect(() => {
           dateValue={saturdayDateValue}
         />
 
+        {specialTfilotOnFirstShabbat.map(
+          (tefila) => (
+            <HomeTefilaCard
+              key={`special-tefila-${tefila.id}`}
+              tefila={tefila}
+              jahrzeits={
+                jahrzeitsByDate.get(
+                  tefila.dateValue ?? '',
+                ) ?? []
+              }
+            />
+          ),
+        )}
+
         {itemsBetweenShabbatot.map((item) =>
           item.type === 'tefila' ? (
             <HomeTefilaCard
@@ -626,6 +656,20 @@ useEffect(() => {
         <ProgramCard
           dateValue={thirdSaturdayDateValue}
         />
+
+        {specialTfilotOnThirdShabbat.map(
+          (tefila) => (
+            <HomeTefilaCard
+              key={`special-tefila-${tefila.id}`}
+              tefila={tefila}
+              jahrzeits={
+                jahrzeitsByDate.get(
+                  tefila.dateValue ?? '',
+                ) ?? []
+              }
+            />
+          ),
+        )}
       </section>
 
       <SupportSection />
