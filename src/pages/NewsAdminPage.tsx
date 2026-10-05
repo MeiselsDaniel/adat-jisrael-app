@@ -40,10 +40,12 @@ import {
 
 type NewsAdminPageProps = {
   onBack: () => void
+  startWithNewPost?: boolean
 }
 
 function NewsAdminPage({
   onBack,
+  startWithNewPost = false,
 }: NewsAdminPageProps) {
   const {
     firebaseUser,
@@ -54,7 +56,7 @@ function NewsAdminPage({
     useState<NewsPost[]>([])
 
   const [formOpen, setFormOpen] =
-    useState(false)
+    useState(startWithNewPost)
 
   const [editingPost, setEditingPost] =
     useState<NewsPost | null>(null)

@@ -185,6 +185,11 @@ const [adminOpen, setAdminOpen] = useState(false)
   const [adminView, setAdminView] =
     useState<AdminView>('dashboard')
 
+  const [
+    quickCreateNews,
+    setQuickCreateNews,
+  ] = useState(false)
+
   const [, setCreatedEvents] =
     useState<AppEvent[]>([])
 
@@ -624,9 +629,20 @@ const [adminOpen, setAdminOpen] = useState(false)
 
           {adminView === 'news' && (
             <NewsAdminPage
-              onBack={() =>
-                setAdminView('dashboard')
+              startWithNewPost={
+                quickCreateNews
               }
+              onBack={() => {
+                if (quickCreateNews) {
+                  setQuickCreateNews(false)
+                  setAdminOpen(false)
+                  setAdminView('dashboard')
+                  setPage('information')
+                  return
+                }
+
+                setAdminView('dashboard')
+              }}
             />
           )}
 
@@ -692,6 +708,15 @@ const [adminOpen, setAdminOpen] = useState(false)
               <InformationPage
                 user={currentUser}
                 targetNewsId={sharedNewsId}
+                onCreateNews={
+                  currentUser.role === 'admin'
+                    ? () => {
+                        setQuickCreateNews(true)
+                        setAdminView('news')
+                        setAdminOpen(true)
+                      }
+                    : undefined
+                }
               />
             ) : (
               <MemberOnlyPage

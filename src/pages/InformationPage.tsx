@@ -4,6 +4,7 @@ import {
   ChevronUp,
   Newspaper,
   Pin,
+  Plus,
 } from 'lucide-react'
 import {
   useEffect,
@@ -28,11 +29,13 @@ import { synagogueSettings } from '../data/settings'
 type InformationPageProps = {
   user: AppUser
   targetNewsId?: string | null
+  onCreateNews?: () => void
 }
 
 function InformationPage({
   user,
   targetNewsId = null,
+  onCreateNews,
 }: InformationPageProps) {
   const { firebaseUser } =
     useAuth()
@@ -293,9 +296,21 @@ function InformationPage({
             </p>
           </div>
 
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-[#183b70]">
-            <Newspaper className="h-6 w-6" />
-          </div>
+          {user.role === 'admin' && onCreateNews ? (
+            <button
+              type="button"
+              onClick={onCreateNews}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#183b70] text-white shadow-sm transition active:scale-95"
+              aria-label="Skapa ny nyhet"
+              title="Skapa ny nyhet"
+            >
+              <Plus className="h-6 w-6" />
+            </button>
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-[#183b70]">
+              <Newspaper className="h-6 w-6" />
+            </div>
+          )}
         </div>
       </section>
 
