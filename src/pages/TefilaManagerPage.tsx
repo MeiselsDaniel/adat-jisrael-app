@@ -15,7 +15,6 @@ import {
 import DaySettingsEditor from '../components/DaySettingsEditor'
 import LiveMinyanCard from '../components/LiveMinyanCard'
 import TefilaInvitePanel from '../components/TefilaInvitePanel'
-import { synagogueSettings } from '../data/settings'
 import { getHebcalDayInfo } from '../services/hebcalService'
 import {
   deleteTefila,
@@ -25,6 +24,7 @@ import {
 } from '../services/tefilaService'
 import type { Tefila } from '../types'
 import { generateStandardTfilot } from '../utils/generateStandardTfilot'
+import { getAutomaticKabbalatShabbatTime } from '../utils/kabbalatShabbat'
 
 type TefilaManagerPageProps = {
   onBack: () => void
@@ -1088,9 +1088,6 @@ function getTefilaId(
 function addKabbalatShabbat(
   tfilot: Tefila[],
 ): Tefila[] {
-  const kabbalatTime =
-    getKabbalatShabbatTime()
-
   const fridayDates = Array.from(
     new Set(
       tfilot
@@ -1126,7 +1123,10 @@ function addKabbalatShabbat(
             ),
           title:
             'Kabbalat Shabbat/Maariv',
-          time: kabbalatTime,
+          time:
+            getAutomaticKabbalatShabbatTime(
+              date,
+            ),
           attending: 0,
         } satisfies Tefila
       },
@@ -1157,19 +1157,6 @@ function addKabbalatShabbat(
       normalizeTime(second.time),
     )
   })
-}
-
-function getKabbalatShabbatTime(): string {
-  const schedule =
-    synagogueSettings.schedule as
-      typeof synagogueSettings.schedule & {
-        kabbalatShabbat?: string
-      }
-
-  return (
-    schedule.kabbalatShabbat ??
-    '19.30'
-  )
 }
 
 function normalizeTime(

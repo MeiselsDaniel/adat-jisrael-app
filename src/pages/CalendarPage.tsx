@@ -20,6 +20,7 @@ import {
 } from '../services/tefilaService'
 import { getHebcalDayInfo } from '../services/hebcalService'
 import { generateStandardTfilot } from '../utils/generateStandardTfilot'
+import { getAutomaticKabbalatShabbatTime } from '../utils/kabbalatShabbat'
 import { useAuth } from '../hooks/useAuth'
 import {
   getJahrzeitDatesBetween,
@@ -645,7 +646,10 @@ function buildCalendarItems({
             id:
               `tefila-${tefilaId}`,
             date: dateValue,
-            time: '19:30',
+            time:
+              getAutomaticKabbalatShabbatTime(
+                new Date(kabbalatCursor),
+              ),
             title:
               'Kabbalat Shabbat',
             category: 'tefila',

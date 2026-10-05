@@ -37,6 +37,7 @@ import { buildProgramCardData } from '../utils/buildProgramCardData'
 import type { Tefila } from '../types'
 import { generateStandardTfilot } from '../utils/generateStandardTfilot'
 import { getDefaultSermon } from '../utils/getDefaultSermon'
+import { getAutomaticKabbalatShabbatTime } from '../utils/kabbalatShabbat'
 import {
   getJahrzeitDatesBetween,
   subscribeToAllJahrzeits,
@@ -49,6 +50,7 @@ import {
 type HomePageProps = Record<string, never>
 
 const upcomingTfilot = generateStandardTfilot()
+
 
 const nextFriday = findNextWeekday(new Date(), 5)
 const nextSaturday = addDays(nextFriday, 1)
@@ -86,7 +88,9 @@ const kabbalatShabbat: Tefila = {
   day: 'Fredag',
   date: formatSwedishDate(nextFriday),
   title: 'Kabbalat Shabbat/Maariv',
-  time: scheduleWithKabbalat.kabbalatShabbat ?? '19.30',
+  time:
+    scheduleWithKabbalat.kabbalatShabbat ??
+    getAutomaticKabbalatShabbatTime(nextFriday),
   attending: 0,
 }
 
@@ -100,7 +104,7 @@ const secondKabbalatShabbat: Tefila = {
   title: 'Kabbalat Shabbat/Maariv',
   time:
     scheduleWithKabbalat.kabbalatShabbat ??
-    '19.30',
+    getAutomaticKabbalatShabbatTime(secondFriday),
   attending: 0,
 }
 
@@ -114,7 +118,7 @@ const thirdKabbalatShabbat: Tefila = {
   title: 'Kabbalat Shabbat/Maariv',
   time:
     scheduleWithKabbalat.kabbalatShabbat ??
-    '19.30',
+    getAutomaticKabbalatShabbatTime(thirdFriday),
   attending: 0,
 }
 
