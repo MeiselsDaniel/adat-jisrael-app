@@ -54,7 +54,6 @@ type MinyanCardProps = {
     result: MinyanResult,
     actualAttendance: number,
   ) => Promise<void>
-  onResetResult?: () => Promise<void>
 }
 
 function MinyanCard({
@@ -83,7 +82,6 @@ function MinyanCard({
   onCancel,
   onReactivate,
   onConfirm,
-  onResetResult,
 }: MinyanCardProps) {
   const [detailsOpen, setDetailsOpen] =
     useState(false)
@@ -247,28 +245,6 @@ function MinyanCard({
   async function handleConfirm(
     result: MinyanResult,
   ) {
-    if (
-      completed &&
-      minyanResult === result
-    ) {
-      if (!onResetResult) return
-
-      const confirmed = window.confirm(
-        'Ångra resultatet? Tfilan öppnas igen och befintliga anmälningar behålls.',
-      )
-
-      if (!confirmed) return
-
-      await runAction(
-        async () => {
-          await onResetResult()
-        },
-        'Resultatet kunde inte återställas.',
-      )
-
-      return
-    }
-
     if (!onConfirm) return
 
     await runAction(
@@ -279,6 +255,7 @@ function MinyanCard({
             ? 0
             : draftActualAttendance,
         )
+        setAdminOpen(false)
       },
       'Resultatet kunde inte sparas.',
     )

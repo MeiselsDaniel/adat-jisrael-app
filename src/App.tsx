@@ -35,6 +35,7 @@ import DocumentManagerPage from './pages/DocumentManagerPage'
 import PendingApprovalPage from './pages/PendingApprovalPage'
 import TefilaManagerPage from './pages/TefilaManagerPage'
 import MinyanStatisticsPage from './pages/MinyanStatisticsPage'
+import CommunityJahrzeitAdminPage from './pages/CommunityJahrzeitAdminPage'
 import type {
   AppEvent,
   AppUser,
@@ -52,6 +53,7 @@ type AdminView =
   | 'minyanStatistics'
   | 'events'
   | 'kiddush'
+  | 'communityJahrzeits'
   | 'news'
   | 'documents'
   | 'newEvent'
@@ -560,6 +562,9 @@ const [adminOpen, setAdminOpen] = useState(false)
               onOpenKiddush={() =>
                 setAdminView('kiddush')
               }
+              onOpenCommunityJahrzeits={() =>
+                setAdminView('communityJahrzeits')
+              }
               onOpenNews={() =>
                 setAdminView('news')
               }
@@ -603,6 +608,14 @@ const [adminOpen, setAdminOpen] = useState(false)
 
           {adminView === 'kiddush' && (
             <KiddushAdminPage
+              onBack={() =>
+                setAdminView('dashboard')
+              }
+            />
+          )}
+
+          {adminView === 'communityJahrzeits' && (
+            <CommunityJahrzeitAdminPage
               onBack={() =>
                 setAdminView('dashboard')
               }

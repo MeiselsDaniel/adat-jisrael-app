@@ -37,7 +37,7 @@ function KiddushPage() {
   const [host, setHost] = useState('')
   const [dedication, setDedication] = useState('')
   const [dedicationType, setDedicationType] =
-    useState<KiddushDedicationType | ''>('')
+    useState<KiddushDedicationType>('occasion')
   const [comment, setComment] = useState('')
   const [error, setError] = useState('')
   const [confirmationOpen, setConfirmationOpen] =
@@ -98,7 +98,7 @@ function KiddushPage() {
     setSelectedItem(item)
     setHost('')
     setDedication('')
-    setDedicationType('')
+    setDedicationType('occasion')
     setComment('')
     setError('')
     setConfirmationOpen(false)
@@ -140,7 +140,7 @@ function KiddushPage() {
         dedication:
           dedication.trim() || undefined,
         dedicationType:
-          dedication.trim() && dedicationType
+          dedication.trim()
             ? dedicationType
             : undefined,
         comment:
@@ -503,29 +503,18 @@ function KiddushPage() {
                     <div className="space-y-3">
                     <label className="block">
                       <span className="text-sm font-bold text-slate-700">
-                        Anledning, valfritt
+                        Typ av dedikation
                       </span>
 
                       <select
                         value={dedicationType}
-                        onChange={(event) => {
-                          const value =
-                            event.target.value as
-                              | KiddushDedicationType
-                              | ''
-
-                          setDedicationType(value)
-
-                          if (!value) {
-                            setDedication('')
-                          }
-                        }}
+                        onChange={(event) =>
+                          setDedicationType(
+                            event.target.value as KiddushDedicationType,
+                          )
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
                       >
-                        <option value="">
-                          Ingen särskild anledning
-                        </option>
-
                         <option value="occasion">
                           Med anledning av
                         </option>
@@ -533,35 +522,48 @@ function KiddushPage() {
                         <option value="memory">
                           Till minne av
                         </option>
+
+                        <option value="celebration">
+                          För att fira
+                        </option>
+
+                        <option value="custom">
+                          Egen text
+                        </option>
                       </select>
                     </label>
 
-                    {dedicationType && (
-                      <label className="block">
-                        <span className="text-sm font-bold text-slate-700">
-                          {dedicationType === 'memory'
-                            ? 'Till minne av vem?'
-                            : 'Anledning'}
-                        </span>
+                    <label className="block">
+                      <span className="text-sm font-bold text-slate-700">
+                        {dedicationType === 'memory'
+                          ? 'Till minne av vem?'
+                          : dedicationType === 'celebration'
+                            ? 'Vad vill du fira?'
+                            : dedicationType === 'custom'
+                              ? 'Text'
+                              : 'Anledning'}
+                      </span>
 
-                        <textarea
-                          value={dedication}
-                          onChange={(event) =>
-                            setDedication(
-                              event.target.value,
-                            )
-                          }
-                          rows={3}
-                          required
-                          placeholder={
-                            dedicationType === 'memory'
-                              ? 'Exempel: David ben Moshe'
-                              : 'Exempel: att visa tacksamhet till Hashem'
-                          }
-                          className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
-                        />
-                      </label>
-                    )}
+                      <textarea
+                        value={dedication}
+                        onChange={(event) =>
+                          setDedication(
+                            event.target.value,
+                          )
+                        }
+                        rows={3}
+                        placeholder={
+                          dedicationType === 'memory'
+                            ? 'Exempel: David ben Moshe'
+                            : dedicationType === 'celebration'
+                              ? 'Exempel: vår dotters bat mitzva'
+                              : dedicationType === 'custom'
+                                ? 'Skriv texten som den ska visas'
+                                : 'Exempel: Ervins födelsedag'
+                        }
+                        className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-600"
+                      />
+                    </label>
                   </div>
                   </div>
 

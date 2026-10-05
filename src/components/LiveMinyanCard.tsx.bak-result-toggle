@@ -5,7 +5,6 @@ import { useTefilaRegistrations } from '../hooks/useTefilaRegistrations'
 import {
   confirmMinyan,
   ensureTefilaExists,
-  resetMinyanResult,
   setTefilaStatus,
   subscribeToTefila,
   type MinyanResult,
@@ -354,11 +353,6 @@ function LiveMinyanCard({
     })
   }
 
-  async function resetSavedMinyanResult() {
-    await ensureRecord()
-    await resetMinyanResult(tefilaId)
-  }
-
   async function sendMinyanPush() {
     setSendingMinyanPush(true)
     setMinyanPushMessage('')
@@ -497,7 +491,6 @@ loading={loading}
       onCancel={cancelTefila}
       onReactivate={reactivateTefila}
       onConfirm={saveMinyanResult}
-      onResetResult={resetSavedMinyanResult}
     />
 
       {profile?.role === 'admin' &&

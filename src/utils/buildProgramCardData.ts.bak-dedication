@@ -277,10 +277,10 @@ export function buildProgramCardData({
       label: 'Kiddush',
       value: kiddushSponsor
         ? kiddushDedication
-          ? `${kiddushSponsor} bjuder på Kiddush ${formatKiddushDedication(
+          ? `${kiddushSponsor} bjuder på Kiddush. ${formatKiddushDedication(
               kiddushDedication,
               kiddush.dedicationType,
-            ).replace(/^./, (char) => char.toLowerCase())}`
+            )}`
           : `${kiddushSponsor} bjuder på Kiddush.`
         : 'Adat Jisrael bjuder på Kiddush.',
       icon: 'wine',

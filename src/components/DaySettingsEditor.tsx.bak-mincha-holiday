@@ -247,7 +247,6 @@ function DaySettingsEditor({
 
       const usesAutomaticMincha =
         dayType === 'shabbat' ||
-        dayType === 'holiday' ||
         dayType === 'shabbatHoliday' ||
         hebcalInfo.isShabbat
 
@@ -357,7 +356,6 @@ function DaySettingsEditor({
 
   const previewUsesAutomaticMincha =
     dayType === 'shabbat' ||
-    dayType === 'holiday' ||
     dayType === 'shabbatHoliday' ||
     hebcalInfo.isShabbat
 

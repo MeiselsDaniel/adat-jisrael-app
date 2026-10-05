@@ -1131,8 +1131,6 @@ function ProgramCard({
     daySettings?.customMinchaLabel?.trim()
 
   const useZmanForMincha =
-    daySettings?.dayType === 'holiday' ||
-    daySettings?.dayType === 'shabbatHoliday' ||
     cardHebcalInfo.isShabbat
 
   const manualSermon =

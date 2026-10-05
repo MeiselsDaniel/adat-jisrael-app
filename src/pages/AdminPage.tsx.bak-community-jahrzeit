@@ -6,7 +6,6 @@ import {
   ChevronRight,
   ChevronUp,
   FileText,
-  Flame,
   LoaderCircle,
   Megaphone,
   Plus,
@@ -53,7 +52,6 @@ type AdminPageProps = {
   onOpenMinyanStatistics: () => void
   onOpenEvents: () => void
   onOpenKiddush: () => void
-  onOpenCommunityJahrzeits: () => void
   onOpenNews: () => void
   onOpenDocuments: () => void
 }
@@ -76,7 +74,6 @@ function AdminPage({
   onOpenMinyanStatistics,
   onOpenEvents,
   onOpenKiddush,
-  onOpenCommunityJahrzeits,
   onOpenNews,
   onOpenDocuments,
 }: AdminPageProps) {
@@ -863,13 +860,6 @@ useEffect(() => {
             title="Kiddush"
             description="Hantera bokningar och lediga datum"
             onClick={onOpenKiddush}
-          />
-
-          <AdminMenuItem
-            icon={<Flame className="h-6 w-6" />}
-            title="Församlingens Jahrezeits"
-            description="Lägg till och hantera församlingens Jahrezeits"
-            onClick={onOpenCommunityJahrzeits}
           />
 
           <AdminMenuItem

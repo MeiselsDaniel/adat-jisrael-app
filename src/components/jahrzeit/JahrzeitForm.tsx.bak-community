@@ -34,7 +34,6 @@ type JahrzeitFormProps = {
   userName: string
   existingJahrzeit?: JahrzeitRecord | null
   onClose: () => void
-  mode?: 'personal' | 'community'
 }
 
 function JahrzeitForm({
@@ -42,9 +41,7 @@ function JahrzeitForm({
   userName,
   existingJahrzeit,
   onClose,
-  mode = 'personal',
 }: JahrzeitFormProps) {
-  const isCommunity = mode === 'community'
   const isEditing =
     Boolean(existingJahrzeit)
 
@@ -243,19 +240,13 @@ async function handleSubmit(
       const commonInput = {
         deceasedName,
         hebrewName,
-        relation:
-          isCommunity
-            ? ''
-            : relation,
+        relation,
         gender:
           gender || undefined,
         notes,
         hebrewDay: day,
         hebrewMonth,
-        remind:
-          isCommunity
-            ? false
-            : remind,
+        remind,
       }
 
       if (existingJahrzeit) {
@@ -295,12 +286,8 @@ async function handleSubmit(
 
           <h2 className="mt-1 text-lg font-bold text-[#183b70]">
             {isEditing
-              ? isCommunity
-                ? 'Redigera församlingens Jahrzeit'
-                : 'Redigera Jahrzeit'
-              : isCommunity
-                ? 'Registrera församlingens Jahrzeit'
-                : 'Registrera Jahrzeit'}
+              ? 'Redigera Jahrzeit'
+              : 'Registrera Jahrzeit'}
           </h2>
         </div>
 
@@ -576,30 +563,28 @@ async function handleSubmit(
           />
         </label>
 
-        {!isCommunity && (
-          <label className="flex items-center justify-between rounded-2xl bg-amber-50 p-4">
-            <span>
-              <span className="block text-sm font-bold text-slate-800">
-                Påminn mig
-              </span>
-
-              <span className="mt-1 block text-xs text-slate-500">
-                Du får en påminnelse inför Jahrzeit.
-              </span>
+        <label className="flex items-center justify-between rounded-2xl bg-amber-50 p-4">
+          <span>
+            <span className="block text-sm font-bold text-slate-800">
+              Påminn mig
             </span>
 
-            <input
-              type="checkbox"
-              checked={remind}
-              onChange={(event) =>
-                setRemind(
-                  event.target.checked,
-                )
-              }
-              className="h-5 w-5 accent-[#68123f]"
-            />
-          </label>
-        )}
+            <span className="mt-1 block text-xs text-slate-500">
+              Du får en påminnelse inför Jahrzeit.
+            </span>
+          </span>
+
+          <input
+            type="checkbox"
+            checked={remind}
+            onChange={(event) =>
+              setRemind(
+                event.target.checked,
+              )
+            }
+            className="h-5 w-5 accent-[#68123f]"
+          />
+        </label>
 
         {error && (
           <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
