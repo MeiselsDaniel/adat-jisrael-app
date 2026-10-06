@@ -20,6 +20,7 @@ export type HebcalDayInfo = {
   parasha: string | null
   holidayNames: string[]
   roshChodeshName: string | null
+  mevarchimText: string | null
 
   candleLightingTime: string | null
   havdalaTime: string | null
@@ -58,6 +59,8 @@ export function getHebcalDayInfo(
         candlelighting: true,
         sedrot: true,
         addHebrewDates: true,
+        molad: true,
+        shabbatMevarchim: true,
       })
 
     return {
@@ -91,6 +94,12 @@ export function getHebcalDayInfo(
 
       roshChodeshName:
         getRoshChodeshName(events),
+
+      mevarchimText:
+        getMevarchimText(
+          date,
+          events,
+        ),
 
       candleLightingTime:
         getTimedEventValue(
@@ -184,10 +193,128 @@ function createFallbackInfo(
     parasha: null,
     holidayNames: [],
     roshChodeshName: null,
+    mevarchimText: null,
 
     candleLightingTime: null,
     havdalaTime: null,
   }
+}
+
+function getMevarchimText(
+  date: Date,
+  events: Event[],
+): string | null {
+  if (!isShabbatMevarchimDate(date)) {
+    return null
+  }
+
+  const moladEvent = events.find(
+    (event) =>
+      event.constructor.name ===
+      'MoladEvent',
+  )
+
+  if (!moladEvent) {
+    return null
+  }
+
+  const description =
+    moladEvent.getDesc()
+
+  const monthMatch =
+    description.match(
+      /^Molad (.+?) \d+$/,
+    )
+
+  const rendered =
+    moladEvent.render('en')
+
+  const moladMatch =
+    rendered.match(
+      /^Molad .+?: ([A-Za-z]+), (\d+):(\d{2}) and (\d+)\s*chalakim$/,
+    )
+
+  if (!monthMatch || !moladMatch) {
+    return null
+  }
+
+  const month = monthMatch[1]
+
+  const weekdayMap: Record<
+    string,
+    string
+  > = {
+    Sunday: 'söndag',
+    Monday: 'måndag',
+    Tuesday: 'tisdag',
+    Wednesday: 'onsdag',
+    Thursday: 'torsdag',
+    Friday: 'fredag',
+    Saturday: 'lördag',
+  }
+
+  const moladWeekday =
+    weekdayMap[moladMatch[1]] ??
+    moladMatch[1]
+
+  const hour =
+    moladMatch[2].padStart(2, '0')
+
+  const minute = moladMatch[3]
+  const chalakim = moladMatch[4]
+
+  const roshChodeshDays: string[] = []
+
+  for (
+    let offset = 1;
+    offset <= 7;
+    offset += 1
+  ) {
+    const candidate = new Date(date)
+
+    candidate.setDate(
+      candidate.getDate() + offset,
+    )
+
+    const candidateEvents =
+      HebrewCalendar.calendar({
+        start: candidate,
+        end: candidate,
+      })
+
+    if (
+      !candidateEvents.some(
+        isRoshChodeshEvent,
+      )
+    ) {
+      continue
+    }
+
+    const weekday =
+      new Intl.DateTimeFormat(
+        'sv-SE',
+        { weekday: 'long' },
+      ).format(candidate)
+
+    roshChodeshDays.push(weekday)
+  }
+
+  if (roshChodeshDays.length === 0) {
+    return null
+  }
+
+  const roshChodeshText =
+    roshChodeshDays.length === 1
+      ? roshChodeshDays[0]
+      : `${roshChodeshDays
+          .slice(0, -1)
+          .join(', ')} och ${
+          roshChodeshDays[
+            roshChodeshDays.length - 1
+          ]
+        }`
+
+  return `Mevarchim Hachodesh ${month}. Rosh Chodesh är ${roshChodeshText}. Molad ${moladWeekday} kl. ${hour}.${minute} och ${chalakim} chalakim.`
 }
 
 function getTimedEventValue(
@@ -258,11 +385,20 @@ function isShabbatMevarchimDate(
     /*
      * Tishrei välsignas inte på Shabbat
      * Mevarchim före Rosh Hashana.
+     *
+     * Rosh Chodesh Cheshvan kan börja den
+     * 30 Tishrei och fortsätta den 1 Cheshvan.
+     * Hoppa därför över en Rosh Chodesh-dag
+     * som fortfarande ligger i Tishrei och
+     * fortsätt leta i stället för att direkt
+     * returnera false.
      */
     const hebrewMonth =
       new HDate(candidate).getMonth()
 
-    return hebrewMonth !== 7
+    if (hebrewMonth !== 7) {
+      return true
+    }
   }
 
   return false

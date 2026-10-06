@@ -22,6 +22,7 @@ type HebcalProgramInfo = {
   isShabbat: boolean
   isShabbatMevarchim: boolean
   roshChodeshName?: string | null
+  mevarchimText?: string | null
 }
 
 type KiddushProgramInfo = {
@@ -331,8 +332,15 @@ export function buildProgramCardData({
     comment:
       daySettings?.comment?.trim() ||
       undefined,
-    moreInformation:
-      daySettings?.moreInformation?.trim() ||
+    moreInformation: [
+      hebcalInfo.mevarchimText,
+      daySettings?.moreInformation?.trim(),
+    ]
+      .filter(
+        (value): value is string =>
+          Boolean(value),
+      )
+      .join('\n\n') ||
       undefined,
   }
 }
