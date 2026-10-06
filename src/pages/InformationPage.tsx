@@ -392,6 +392,7 @@ function InformationPage({
                 void markNewsAsRead(
                   post.id,
                   firebaseUser.uid,
+                  true,
                 ).catch(
                   (caughtError) => {
                     console.error(

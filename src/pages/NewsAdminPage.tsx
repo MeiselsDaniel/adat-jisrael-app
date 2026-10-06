@@ -37,6 +37,10 @@ import {
   type NewsCategory,
   type NewsStatus,
 } from '../services/newsService'
+import {
+  subscribeToOpenedNewsReads,
+  type NewsRead,
+} from '../services/newsReadsService'
 
 type NewsAdminPageProps = {
   onBack: () => void
@@ -54,6 +58,9 @@ function NewsAdminPage({
 
   const [posts, setPosts] =
     useState<NewsPost[]>([])
+
+  const [newsReads, setNewsReads] =
+    useState<NewsRead[]>([])
 
   const [formOpen, setFormOpen] =
     useState(startWithNewPost)
@@ -148,6 +155,18 @@ const [status, setStatus] =
           'Nyheterna kunde inte hämtas.',
         )
         setLoading(false)
+      },
+    )
+  }, [])
+
+  useEffect(() => {
+    return subscribeToOpenedNewsReads(
+      setNewsReads,
+      (caughtError) => {
+        console.error(
+          'Kunde inte läsa nyhetsstatistik:',
+          caughtError,
+        )
       },
     )
   }, [])
@@ -951,6 +970,13 @@ const [status, setStatus] =
             <NewsAdminCard
               key={post.id}
               post={post}
+              readCount={
+                newsReads.filter(
+                  (read) =>
+                    read.newsId ===
+                    post.id,
+                ).length
+              }
               onEdit={() =>
                 editPost(post)
               }
@@ -967,12 +993,14 @@ const [status, setStatus] =
 
 type NewsAdminCardProps = {
   post: NewsPost
+  readCount: number
   onEdit: () => void
   onDelete: () => void
 }
 
 function NewsAdminCard({
   post,
+  readCount,
   onEdit,
   onDelete,
 }: NewsAdminCardProps) {
@@ -1034,6 +1062,13 @@ function NewsAdminCard({
             {post.isPinned && (
               <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
                 Fäst
+              </span>
+            )}
+
+            {post.status ===
+              'published' && (
+              <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-bold text-sky-700">
+                Läst av {readCount}
               </span>
             )}
           </div>
