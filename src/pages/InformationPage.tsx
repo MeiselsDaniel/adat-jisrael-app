@@ -487,10 +487,7 @@ function NewsCard({
     }
 
     setOpen(true)
-
-    if (!isRead) {
-      onRead()
-    }
+    onRead()
   }, [
     autoOpen,
     isRead,
@@ -716,7 +713,7 @@ return (
           <button
             type="button"
             onClick={() => {
-              if (!open && !isRead) {
+              if (!open) {
                 onRead()
               }
 

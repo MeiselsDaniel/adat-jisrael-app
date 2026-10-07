@@ -210,8 +210,9 @@ function getMevarchimText(
 
   const moladEvent = events.find(
     (event) =>
-      event.constructor.name ===
-      'MoladEvent',
+      event
+        .getDesc()
+        .startsWith('Molad '),
   )
 
   if (!moladEvent) {
