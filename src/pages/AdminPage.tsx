@@ -878,11 +878,21 @@ useEffect(() => {
             }
             title="Fäst meddelande"
             description="Visa ett tillfälligt meddelande på startsidan"
-            onClick={() =>
-              setPinnedMessageOpen(
-                (current) => !current,
-              )
-            }
+            onClick={() => {
+              if (!pinnedMessageOpen) {
+                const today = new Date()
+                const end = new Date(today)
+                end.setDate(end.getDate() + 4)
+
+                const formatLocalDate = (date: Date) =>
+                  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+                setPinnedMessageStartDate(formatLocalDate(today))
+                setPinnedMessageEndDate(formatLocalDate(end))
+              }
+
+              setPinnedMessageOpen((current) => !current)
+            }}
           />
 
           {pinnedMessageOpen && (
@@ -950,11 +960,18 @@ useEffect(() => {
                       value={
                         pinnedMessageStartDate
                       }
-                      onChange={(event) =>
-                        setPinnedMessageStartDate(
-                          event.target.value,
-                        )
-                      }
+                      onChange={(event) => {
+                        const nextStart = event.target.value
+                        setPinnedMessageStartDate(nextStart)
+                        if (nextStart) {
+                          const date = new Date(nextStart + 'T12:00:00')
+                          date.setDate(date.getDate() + 4)
+                          const year = date.getFullYear()
+                          const month = String(date.getMonth() + 1).padStart(2, '0')
+                          const day = String(date.getDate()).padStart(2, '0')
+                          setPinnedMessageEndDate(`${year}-${month}-${day}`)
+                        }
+                      }}
                       className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm"
                     />
                   </div>
