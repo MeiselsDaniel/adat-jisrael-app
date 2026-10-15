@@ -48,7 +48,7 @@ function MorePage({
         </div>
       </section>
 
-      {user.role !== 'user' && (
+      {(user.role === 'admin' || user.role === 'gabbai') && (
         <button
           onClick={openAdmin}
           className="flex w-full items-center gap-4 rounded-3xl bg-[#183b70] p-5 text-left text-white shadow-sm transition hover:bg-[#102d57]"
@@ -61,7 +61,9 @@ function MorePage({
             <p className="font-bold">Administration</p>
 
             <p className="mt-1 text-sm text-blue-100">
-              Hantera användare, händelser och information
+              {user.role === 'gabbai'
+                ? 'Hantera tfilot och se minjanstatistik'
+                : 'Hantera användare, händelser och information'}
             </p>
           </div>
 

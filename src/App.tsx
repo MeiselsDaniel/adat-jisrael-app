@@ -35,6 +35,7 @@ import DocumentManagerPage from './pages/DocumentManagerPage'
 import PendingApprovalPage from './pages/PendingApprovalPage'
 import TefilaManagerPage from './pages/TefilaManagerPage'
 import MinyanStatisticsPage from './pages/MinyanStatisticsPage'
+import GabbaiAdminPage from './pages/GabbaiAdminPage'
 import CommunityJahrzeitAdminPage from './pages/CommunityJahrzeitAdminPage'
 import type {
   AppEvent,
@@ -543,12 +544,32 @@ const [adminOpen, setAdminOpen] = useState(false)
       </div>
     ) : null
 
-  if (adminOpen) {
+  const isFullAdmin = currentUser.role === 'admin'
+  const isGabbai = currentUser.role === 'gabbai'
+  const canOpenAdministration = isFullAdmin || isGabbai
+
+  const allowedAdminView =
+    isFullAdmin ||
+    adminView === 'dashboard' ||
+    adminView === 'tfilot' ||
+    adminView === 'minyanStatistics'
+
+  if (adminOpen && canOpenAdministration && allowedAdminView) {
     return (
       <div className="min-h-screen bg-slate-100 text-slate-900">
         {pushBanner}
         <div className="mx-auto min-h-screen w-full max-w-md bg-[#f8fafc] px-4 pt-5 shadow-xl [padding-bottom:calc(11rem+env(safe-area-inset-bottom))]">
-          {adminView === 'dashboard' && (
+          {adminView === 'dashboard' && isGabbai && (
+            <GabbaiAdminPage
+              onBack={closeAdmin}
+              onOpenTfilot={() => setAdminView('tfilot')}
+              onOpenMinyanStatistics={() =>
+                setAdminView('minyanStatistics')
+              }
+            />
+          )}
+
+          {adminView === 'dashboard' && isFullAdmin && (
             <AdminPage
               onBack={closeAdmin}
               onCreateEvent={() => {
@@ -818,7 +839,9 @@ function convertFirebaseProfile(
     role:
       profile.role === 'admin'
         ? 'admin'
-        : 'user',
+        : profile.role === 'gabbai'
+          ? 'gabbai'
+          : 'user',
     category,
     status: profile.status,
     permissions:

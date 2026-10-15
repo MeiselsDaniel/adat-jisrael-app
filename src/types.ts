@@ -11,6 +11,7 @@ export type Page =
 
 export type UserRole =
   | 'user'
+  | 'gabbai'
   | 'admin'
   | 'superadmin'
 
