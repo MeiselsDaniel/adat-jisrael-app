@@ -31,3 +31,6 @@ dist-ssr
 skills-lock.json
 .vercel
 .env*
+
+# Lokala backupfiler
+*.bak-*
