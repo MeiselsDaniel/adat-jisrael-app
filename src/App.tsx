@@ -712,7 +712,14 @@ const [adminOpen, setAdminOpen] = useState(false)
 
         <main className="flex-1 px-4 pb-32 pt-5">
           {page === 'home' && (
-            <HomePage />
+            <HomePage
+              userId={currentUser.id}
+              isGuest={
+                currentUser.status === 'approved' &&
+                currentUser.category === 'guest'
+              }
+              onBecomeMember={() => setPage('membership')}
+            />
           )}
 
           {page === 'calendar' && (

@@ -1,4 +1,5 @@
 import {
+  deleteDoc,
   getDoc,
   setDoc,
   collection,
@@ -9,10 +10,18 @@ import {
   serverTimestamp,
   updateDoc,
   type Unsubscribe,
-} from 'firebase/firestore'
+
+  Timestamp,
+  deleteField,} from 'firebase/firestore'
 import { db } from '../firebase/config'
 
 export type MembershipApplicationInput = {
+  under26: boolean
+  jfstMember: boolean | null
+  seat: boolean
+  gender: 'man' | 'woman' | null
+  annualFee: number
+
   userId: string
   name: string
   email: string
@@ -43,6 +52,12 @@ export async function createMembershipApplication(
         message:
           input.message?.trim() || null,
 
+        under26: input.under26,
+        jfstMember: input.jfstMember,
+        seat: input.seat,
+        gender: input.gender,
+        annualFee: input.annualFee,
+
         status: 'pending',
 
         createdAt:
@@ -64,11 +79,18 @@ export async function getMembershipApplication(userId: string) {
 
 export type MembershipApplicationStatus =
   | 'pending'
+  | 'processed'
   | 'processing'
   | 'approved'
   | 'rejected'
 
 export type MembershipApplication = {
+  under26: boolean
+  jfstMember: boolean | null
+  seat: boolean
+  gender: 'man' | 'woman' | null
+  annualFee: number
+
   id: string
   userId: string
   name: string
@@ -138,6 +160,35 @@ export async function updateMembershipApplicationStatus(
     {
       status,
       updatedAt: serverTimestamp(),
+      deleteAt:
+        status === 'processed'
+          ? Timestamp.fromDate(
+              new Date(Date.now() + 50 * 24 * 60 * 60 * 1000),
+            )
+          : deleteField(),
     },
   )
+}
+
+
+export async function deleteMembershipApplication(
+  applicationId: string,
+): Promise<void> {
+  const reference = doc(
+    db,
+    'membershipApplications',
+    applicationId,
+  )
+
+  const snapshot = await getDoc(reference)
+
+  if (!snapshot.exists()) {
+    throw new Error('Ansökan finns inte längre.')
+  }
+
+  if (snapshot.data().status !== 'processed') {
+    throw new Error('Endast behandlade ansökningar får raderas.')
+  }
+
+  await deleteDoc(reference)
 }

@@ -1495,3 +1495,105 @@ function formatSwedishDate(
     },
   ).format(date);
 }
+
+export const notifyAdminNewMembershipApplication =
+  onDocumentCreated(
+    {
+      document: "membershipApplications/{applicationId}",
+      secrets: [BREVO_API_KEY],
+    },
+    async (event) => {
+      const application = event.data?.data();
+      if (!application) return;
+
+      const escapeHtml = (value: unknown): string =>
+        String(value ?? "").replace(/[&<>]/g, (char) => {
+          const entities: Record<string, string> = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+          };
+          return entities[char];
+        });
+
+      const hasFeeDetails =
+        typeof application.annualFee === "number";
+
+      const fields = [
+        ["Namn", application.name],
+        ["E-post", application.email],
+        ["Telefon", application.phone],
+        ["Adress", application.address],
+        ["Meddelande", application.message],
+        ...(hasFeeDetails ? [
+          ["Under 26 år", application.under26 === true ? "Ja" : "Nej"],
+          ...(application.under26 === false ? [
+            [
+              "Medlem i Judiska Församlingen i Stockholm",
+              application.jfstMember === true ? "Ja" : "Nej",
+            ],
+          ] : []),
+          ["Önskar fast plats", application.seat === true ? "Ja" : "Nej"],
+          ...(application.seat === true &&
+              application.under26 === false ? [
+            [
+              "Sektion",
+              application.gender === "man" ? "Herr" : "Dam",
+            ],
+          ] : []),
+          [
+            "Beräknad årsavgift",
+            `${application.annualFee.toLocaleString("sv-SE")} kr/år`,
+          ],
+        ] : []),
+      ];
+
+      const htmlContent = `
+        <h2>Ny medlemsansökan till Adat Jisrael</h2>
+        <p>En person har ansökt om medlemskap i föreningen.</p>
+        ${fields.map(([label, value]) =>
+          `<p><strong>${label}:</strong> ${escapeHtml(value)}</p>`
+        ).join("")}
+        <p><a href="https://app.adatjisrael.se/">
+          Öppna administrationen
+        </a></p>
+      `;
+
+      const response = await fetch(
+        "https://api.brevo.com/v3/smtp/email",
+        {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            "api-key": BREVO_API_KEY.value(),
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            sender: {
+              name: "Adat Jisrael",
+              email: "info@adatjisrael.se",
+            },
+            to: [{
+              email: "info@adatjisrael.se",
+              name: "Adat Jisrael",
+            }],
+            subject: "Ny medlemsansökan till Adat Jisrael",
+            htmlContent,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        logger.error("Mejl om medlemsansökan misslyckades", {
+          applicationId: event.params.applicationId,
+          status: response.status,
+          response: await response.text(),
+        });
+        throw new Error("Brevo kunde inte skicka mejlet.");
+      }
+
+      logger.info("Mejl om medlemsansökan skickat", {
+        applicationId: event.params.applicationId,
+      });
+    },
+  );

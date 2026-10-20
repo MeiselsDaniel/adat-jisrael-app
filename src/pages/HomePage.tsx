@@ -1,11 +1,14 @@
 import {
   Heart,
+  HeartHandshake,
+  ChevronRight,
 } from 'lucide-react'
 import {
   useEffect,
   useMemo,
   useState,
 } from 'react'
+import { getMembershipApplication } from '../services/membershipApplicationService'
 import LiveMinyanCard from '../components/LiveMinyanCard'
 import RichEventCard from '../components/RichEventCard'
 import TefilaInvitationCards from '../components/TefilaInvitationCards'
@@ -47,7 +50,11 @@ import {
   subscribeToPinnedMessage,
   type PinnedMessage,
 } from '../services/pinnedMessageService'
-type HomePageProps = Record<string, never>
+type HomePageProps = {
+  userId: string
+  isGuest: boolean
+  onBecomeMember: () => void
+}
 
 const upcomingTfilot = generateStandardTfilot()
 
@@ -122,9 +129,46 @@ const thirdKabbalatShabbat: Tefila = {
   attending: 0,
 }
 
-function HomePage(
-  {}: HomePageProps,
-) {
+function HomePage({
+  userId,
+  isGuest,
+  onBecomeMember,
+}: HomePageProps) {
+  const [showMembershipPrompt, setShowMembershipPrompt] =
+    useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    setShowMembershipPrompt(false)
+
+    if (!isGuest || !userId) {
+      return () => {
+        active = false
+      }
+    }
+
+    getMembershipApplication(userId)
+      .then((application) => {
+        if (active) {
+          setShowMembershipPrompt(!application)
+        }
+      })
+      .catch((error) => {
+        console.error(
+          'Kunde inte kontrollera medlemsansökan på startsidan:',
+          error,
+        )
+        if (active) {
+          setShowMembershipPrompt(false)
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [userId, isGuest])
+
   const [firebaseTfilot, setFirebaseTfilot] =
     useState<TefilaRecord[]>([])
 
@@ -529,6 +573,29 @@ useEffect(() => {
             </div>
           </section>
         )}
+
+      {showMembershipPrompt && (
+        <button
+          type="button"
+          onClick={onBecomeMember}
+          className="flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3 text-left shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#183b70]/10 text-[#183b70]">
+            <HeartHandshake className="h-5 w-5" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-[#183b70]">
+              Vi ser att du inte är medlem … 👀
+            </p>
+            <p className="mt-0.5 text-xs leading-5 text-slate-600">
+              Vad väntar du på? Bli medlem i Adat Jisrael!
+            </p>
+          </div>
+
+          <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
+        </button>
+      )}
 
       <section>
         <h1 className="text-2xl font-bold text-[#183b70]">

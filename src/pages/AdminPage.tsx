@@ -40,6 +40,7 @@ import {
   type PinnedMessageType,
 } from '../services/pinnedMessageService'
 import {
+  deleteMembershipApplication,
   subscribeToMembershipApplications,
   updateMembershipApplicationStatus,
   type MembershipApplication,
@@ -358,6 +359,28 @@ useEffect(() => {
       setSavingMembershipApplicationId(
         null,
       )
+    }
+  }
+
+  async function handleDeleteMembershipApplication(
+    applicationId: string,
+    applicationName: string,
+  ) {
+    const confirmed = window.confirm(
+      `Vill du verkligen radera medlemsansökan från ${applicationName}?\\n\\nDetta går inte att ångra.`
+    )
+
+    if (!confirmed) return
+
+    setSavingMembershipApplicationId(applicationId)
+
+    try {
+      await deleteMembershipApplication(applicationId)
+    } catch (error) {
+      console.error('Kunde inte radera medlemsansökan:', error)
+      window.alert('Kunde inte radera ansökan. Försök igen.')
+    } finally {
+      setSavingMembershipApplicationId(null)
     }
   }
 
@@ -1044,6 +1067,11 @@ useEffect(() => {
             }
             title="Medlemsansökningar"
             description="Se och hantera inkomna medlemsansökningar"
+            badge={membershipApplications.filter(
+              (application) =>
+                application.status === 'pending' ||
+                application.status === 'processing',
+            ).length}
             onClick={() =>
               setMembershipApplicationsOpen(
                 (current) => !current,
@@ -1059,10 +1087,28 @@ useEffect(() => {
                     Inga medlemsansökningar ännu.
                   </p>
                 ) : (
-                  membershipApplications.map(
+                  [...membershipApplications]
+                    .sort((a, b) => {
+                      const aPending =
+                        a.status === 'pending' || a.status === 'processing'
+                      const bPending =
+                        b.status === 'pending' || b.status === 'processing'
+                      return Number(bPending) - Number(aPending)
+                    })
+                    .map(
                     (application) => (
+                      <div key={application.id}>
+                        {(application.status === 'pending' ||
+                          application.status === 'processing') ? (
+                          <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Väntande ansökan
+                          </h3>
+                        ) : (
+                          <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Historik
+                          </h3>
+                        )}
                       <article
-                        key={application.id}
                         className="rounded-2xl bg-white p-4 ring-1 ring-slate-200"
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -1077,13 +1123,10 @@ useEffect(() => {
                           </div>
 
                           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                            {application.status === 'pending'
-                              ? 'Ny'
-                              : application.status === 'processing'
-                                ? 'Under behandling'
-                                : application.status === 'approved'
-                                  ? 'Godkänd'
-                                  : 'Avslagen'}
+                            {application.status === 'pending' ||
+                              application.status === 'processing'
+                                ? 'Väntande'
+                                : 'Behandlad'}
                           </span>
                         </div>
 
@@ -1105,62 +1148,47 @@ useEffect(() => {
                           </div>
                         )}
 
-                        <div className="mt-4 grid grid-cols-2 gap-2">
+                        <div className="mt-4">
                           <button
                             type="button"
-                            disabled={
-                              savingMembershipApplicationId === application.id
-                            }
+                            disabled={savingMembershipApplicationId === application.id}
                             onClick={() => {
                               void handleMembershipApplicationStatus(
                                 application.id,
-                                'processing',
+                                application.status === 'pending' ||
+                                application.status === 'processing'
+                                  ? 'processed'
+                                  : 'pending',
                               )
                             }}
-                            className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-800 ring-1 ring-amber-200 disabled:opacity-50"
+                            className="w-full rounded-xl bg-sky-50 px-3 py-2.5 text-sm font-bold text-[#183b70] ring-1 ring-sky-200 disabled:opacity-50"
                           >
-                            Under behandling
+                            {application.status === 'pending' ||
+                            application.status === 'processing'
+                              ? 'Markera som behandlad'
+                              : 'Återställ till väntande'}
                           </button>
-
-                          <button
-                            type="button"
-                            disabled={
-                              savingMembershipApplicationId === application.id
-                            }
-                            onClick={() => {
-                              void handleMembershipApplicationStatus(
-                                application.id,
-                                'approved',
-                              )
-                            }}
-                            className="rounded-xl bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 disabled:opacity-50"
-                          >
-                            Godkänd
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={
-                              savingMembershipApplicationId === application.id
-                            }
-                            onClick={() => {
-                              void handleMembershipApplicationStatus(
-                                application.id,
-                                'rejected',
-                              )
-                            }}
-                            className="col-span-2 rounded-xl bg-rose-50 px-3 py-2.5 text-xs font-bold text-rose-800 ring-1 ring-rose-200 disabled:opacity-50"
-                          >
-                            Avslagen
-                          </button>
-                        </div>
-
-                        {application.status === 'approved' && (
-                          <p className="mt-3 rounded-xl bg-sky-50 px-3 py-2 text-xs font-semibold leading-5 text-[#183b70]">
-                            Styrelsen har godkänt ansökan. Ändra användarens roll till Medlem separat när det är dags att ge medlemsbehörighet i appen.
+                          {application.status === 'processed' && (
+                            <button
+                              type="button"
+                              disabled={savingMembershipApplicationId === application.id}
+                              onClick={() => {
+                                void handleDeleteMembershipApplication(
+                                  application.id,
+                                  application.name,
+                                )
+                              }}
+                              className="mt-2 w-full rounded-xl bg-rose-50 px-3 py-2.5 text-sm font-bold text-rose-700 ring-1 ring-rose-200 disabled:opacity-50"
+                            >
+                              Radera ansökan
+                            </button>
+                          )}
+                          <p className="mt-3 text-xs text-slate-500">
+                            Ändra användarens behörighet separat under Användare.
                           </p>
-                        )}
+                        </div>
                       </article>
+                      </div>
                     ),
                   )
                 )}
@@ -1704,6 +1732,7 @@ type AdminMenuItemProps = {
   title: string
   description: string
   onClick?: () => void
+  badge?: number
 }
 
 function AdminMenuItem({
@@ -1711,6 +1740,7 @@ function AdminMenuItem({
   title,
   description,
   onClick,
+  badge,
 }: AdminMenuItemProps) {
   return (
     <button
@@ -1731,6 +1761,12 @@ function AdminMenuItem({
           {description}
         </p>
       </div>
+
+      {badge != null && badge > 0 && (
+        <span className="flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
+          {badge}
+        </span>
+      )}
 
       <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
     </button>

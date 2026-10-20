@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { calculateMembershipFee } from '../utils/membershipFee'
 import { createMembershipApplication, getMembershipApplication } from '../services/membershipApplicationService'
 import type { FormEvent } from 'react'
 import {
@@ -87,6 +88,16 @@ function MembershipPage({
       return
     }
 
+    if (calculateMembershipFee({
+      under26: feeUnder26,
+      jfstMember: feeJfstMember,
+      seat: feeSeat,
+      gender: feeGender,
+    }) === null) {
+      setError('Besvara frågorna under Medlemsuppgifter.')
+      return
+    }
+
     setSaving(true)
     try {
       await createMembershipApplication({
@@ -96,6 +107,16 @@ function MembershipPage({
         phone,
         address,
         message,
+        under26: feeUnder26 as boolean,
+        jfstMember: feeUnder26 ? null : feeJfstMember,
+        seat: feeSeat as boolean,
+        gender: feeUnder26 || !feeSeat ? null : feeGender,
+        annualFee: calculateMembershipFee({
+          under26: feeUnder26,
+          jfstMember: feeJfstMember,
+          seat: feeSeat,
+          gender: feeGender,
+        }) as number,
       })
       setSubmitted(true)
       setFormOpen(false)
@@ -256,11 +277,111 @@ function MembershipPage({
             </label>
           </section>
 
+          <section className="space-y-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div>
+              <h2 className="text-lg font-bold text-[#183b70]">
+                Medlemsuppgifter
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Uppgifterna används för att beräkna din medlemsavgift.
+              </p>
+            </div>
+
+            <FeeQuestion
+              question="Är du under 26 år?"
+              value={feeUnder26}
+              onChange={(value) => {
+                setFeeUnder26(value)
+                setFeeJfstMember(null)
+                setFeeSeat(null)
+                setFeeGender(null)
+              }}
+            />
+
+            {feeUnder26 === false && (
+              <FeeQuestion
+                question="Är du medlem i Judiska Församlingen i Stockholm (JFST)?"
+                value={feeJfstMember}
+                onChange={(value) => {
+                  setFeeJfstMember(value)
+                  setFeeSeat(null)
+                  setFeeGender(null)
+                }}
+              />
+            )}
+
+            {(feeUnder26 === true ||
+              (feeUnder26 === false && feeJfstMember !== null)) && (
+              <FeeQuestion
+                question="Vill du ha en fast plats i synagogan?"
+                value={feeSeat}
+                onChange={(value) => {
+                  setFeeSeat(value)
+                  setFeeGender(null)
+                }}
+              />
+            )}
+
+            {feeUnder26 === false &&
+              feeJfstMember !== null &&
+              feeSeat === true && (
+                <div>
+                  <p className="text-sm font-bold text-slate-700">
+                    Vilken avgift gäller?
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Avgiften skiljer sig mellan herr- och damsektionen.
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <ChoiceButton
+                      active={feeGender === 'man'}
+                      onClick={() => setFeeGender('man')}
+                    >
+                      Herr
+                    </ChoiceButton>
+                    <ChoiceButton
+                      active={feeGender === 'woman'}
+                      onClick={() => setFeeGender('woman')}
+                    >
+                      Dam
+                    </ChoiceButton>
+                  </div>
+                </div>
+              )}
+
+            {calculateMembershipFee({
+              under26: feeUnder26,
+              jfstMember: feeJfstMember,
+              seat: feeSeat,
+              gender: feeGender,
+            }) !== null && (
+              <div className="rounded-2xl bg-sky-50 p-4 text-center">
+                <p className="text-sm font-bold text-sky-700">
+                  Din beräknade medlemsavgift
+                </p>
+                <p className="mt-1 text-2xl font-black text-[#183b70]">
+                  {calculateMembershipFee({
+                    under26: feeUnder26,
+                    jfstMember: feeJfstMember,
+                    seat: feeSeat,
+                    gender: feeGender,
+                  })?.toLocaleString('sv-SE')} kr/år
+                </p>
+              </div>
+            )}
+          </section>
+
           {error && (
             <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
               {error}
             </div>
           )}
+
+          <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+            Enligt Adat Jisraels stadgar kan medlemskap
+            beviljas personer som är födda judar eller har
+            genomgått en ortodox konvertering.
+          </div>
 
           <button
             type="submit"
@@ -285,30 +406,6 @@ function MembershipPage({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-3xl bg-[#183b70] p-4 text-white shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 2.5 20.2 17H3.8L12 2.5Z" />
-              <path d="M12 21.5 3.8 7h16.4L12 21.5Z" />
-            </svg>
-          </div>
-
-          <h1 className="text-xl font-bold">
-            Medlemskap i Adat Jisrael
-          </h1>
-        </div>
-      </section>
-
       <MembershipFeeCalculator
         open={feeCalculatorOpen}
         setOpen={setFeeCalculatorOpen}
