@@ -1,5 +1,6 @@
 import {
-  addDoc,
+  getDoc,
+  setDoc,
   collection,
   doc,
   onSnapshot,
@@ -23,12 +24,14 @@ export type MembershipApplicationInput = {
 export async function createMembershipApplication(
   input: MembershipApplicationInput,
 ): Promise<string> {
-  const reference =
-    await addDoc(
-      collection(
-        db,
-        'membershipApplications',
-      ),
+  const reference = doc(db, 'membershipApplications', input.userId)
+
+  const existing = await getDoc(reference)
+  if (existing.exists()) {
+    throw new Error('Du har redan skickat en medlemsansökan.')
+  }
+
+  await setDoc(reference,
       {
         userId: input.userId,
         name: input.name.trim(),
@@ -51,6 +54,11 @@ export async function createMembershipApplication(
     )
 
   return reference.id
+}
+
+export async function getMembershipApplication(userId: string) {
+  const snapshot = await getDoc(doc(db, 'membershipApplications', userId))
+  return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } as MembershipApplication : null
 }
 
 

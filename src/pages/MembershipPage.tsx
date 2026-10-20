@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createMembershipApplication, getMembershipApplication } from '../services/membershipApplicationService'
 import type { FormEvent } from 'react'
 import {
   ArrowRight,
@@ -11,16 +12,21 @@ import {
 } from 'lucide-react'
 
 type MembershipPageProps = {
+  userId: string
   userName: string
   userEmail: string
 }
 
 function MembershipPage({
+  userId,
   userName,
   userEmail,
 }: MembershipPageProps) {
   const [formOpen, setFormOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [checkFailed, setCheckFailed] = useState(false)
 
   const [name, setName] = useState(userName)
   const [email, setEmail] = useState(userEmail)
@@ -40,10 +46,35 @@ function MembershipPage({
   const [feeGender, setFeeGender] =
     useState<'man' | 'woman' | null>(null)
 
-  function handleSubmit(
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setSubmitted(false)
+    setCheckFailed(false)
+
+    getMembershipApplication(userId)
+      .then((application) => {
+        if (active) setSubmitted(Boolean(application))
+      })
+      .catch((error) => {
+        console.error('Kunde inte läsa medlemsansökan:', error)
+        if (active) {
+          setCheckFailed(true)
+          setError('Kunde inte kontrollera tidigare ansökningar.')
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => { active = false }
+  }, [userId])
+
+  async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault()
+    if (saving || loading || checkFailed) return
     setError('')
 
     if (!name.trim()) {
@@ -56,8 +87,28 @@ function MembershipPage({
       return
     }
 
-    setSubmitted(true)
-    setFormOpen(false)
+    setSaving(true)
+    try {
+      await createMembershipApplication({
+        userId,
+        name,
+        email,
+        phone,
+        address,
+        message,
+      })
+      setSubmitted(true)
+      setFormOpen(false)
+    } catch (error) {
+      console.error('Kunde inte skicka medlemsansökan:', error)
+      setError('Ansökan kunde inte sparas. Försök igen.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return <p className="p-6 text-center">Kontrollerar medlemsansökan…</p>
   }
 
   if (submitted) {
@@ -213,10 +264,11 @@ function MembershipPage({
 
           <button
             type="submit"
+            disabled={saving || checkFailed}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#183b70] px-5 py-4 font-bold text-white transition hover:bg-[#102d57]"
           >
             <Send className="h-5 w-5" />
-            Skicka ansökan
+            {saving ? "Skickar ansökan…" : "Skicka ansökan"}
           </button>
 
           <button

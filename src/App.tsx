@@ -762,6 +762,7 @@ const [adminOpen, setAdminOpen] = useState(false)
 
           {page === 'membership' && (
             <MembershipPage
+              userId={currentUser.id}
               userName={currentUser.name}
               userEmail={currentUser.email}
             />
