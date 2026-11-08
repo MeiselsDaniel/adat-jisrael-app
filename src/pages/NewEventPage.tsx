@@ -469,8 +469,7 @@ function NewEventPage({
 
         if (
           (eventType === 'activity' || eventType === 'shiur') &&
-          publishAsNews &&
-          !initialEvent
+          publishAsNews
         ) {
           const date = new Date(
             `${newEvent.startDate}T12:00:00`,
@@ -512,6 +511,8 @@ function NewEventPage({
             content: newsContent,
             imageUrl:
               newEvent.imageUrl || undefined,
+            linkUrl: `https://app.adatjisrael.se/event/${newEvent.id}`,
+            linkLabel: 'Visa evenemang och anmäl dig',
             isPinned: false,
             status: 'published',
             authorId: currentUserId,
@@ -1027,11 +1028,10 @@ function NewEventPage({
             </>
           )}
 
-          {(eventType === 'activity' || eventType === 'shiur') &&
-            !initialEvent && (
+          {(eventType === 'activity' || eventType === 'shiur') && (
               <Toggle
-                label="Publicera även som nyhet"
-                description="Skapar automatiskt en publicerad nyhet med aktivitetens titel, datum och information."
+                label={initialEvent ? "Publicera som nyhet nu" : "Publicera även som nyhet"}
+                description="Skapar en ny publicerad nyhet med länk till evenemanget. Lämna av för att bara spara evenemanget."
                 checked={publishAsNews}
                 onChange={setPublishAsNews}
               />

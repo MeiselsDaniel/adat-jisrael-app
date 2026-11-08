@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { subscribeToAllEvents, type StoredAppEvent } from '../services/eventService'
 import { useAuth } from '../hooks/useAuth'
 import {
   approveUserAsGuest,
@@ -118,6 +119,11 @@ function AdminPage({
     'mazelTov',
   )
 
+  const [pinnableEvents, setPinnableEvents] = useState<StoredAppEvent[]>([])
+  const [pinnedEventId, setPinnedEventId] = useState('')
+
+  useEffect(() => subscribeToAllEvents(setPinnableEvents), [])
+
   const [
     pinnedMessageText,
     setPinnedMessageText,
@@ -197,6 +203,7 @@ useEffect(() => {
         setPinnedMessageText(
           message.text,
         )
+        setPinnedEventId(message.eventId ?? '')
         setPinnedMessageStartDate(
           message.startDate,
         )
@@ -388,7 +395,12 @@ useEffect(() => {
     const cleanText =
       pinnedMessageText.trim()
 
-    if (!cleanText) {
+    if (pinnedMessageType === 'event' && !pinnedEventId) {
+      setPinnedMessageFeedback('Välj ett evenemang först.')
+      return
+    }
+
+    if (pinnedMessageType !== 'event' && !cleanText) {
       setPinnedMessageFeedback(
         'Skriv ett meddelande först.',
       )
@@ -412,6 +424,7 @@ useEffect(() => {
       await savePinnedMessage({
         type: pinnedMessageType,
         text: cleanText,
+        eventId: pinnedMessageType === 'event' ? pinnedEventId : '',
         startDate:
           pinnedMessageStartDate,
         endDate:
@@ -951,10 +964,22 @@ useEffect(() => {
                     <option value="general">
                       Meddelande
                     </option>
+                    <option value="event">Kommande evenemang</option>
                   </select>
                 </div>
 
-                <div>
+                {pinnedMessageType === 'event' && (
+                  <div>
+                    <label className="text-sm font-bold text-slate-700">Välj evenemang</label>
+                    <select value={pinnedEventId} onChange={(event) => setPinnedEventId(event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                      <option value="">Välj ett publicerat evenemang</option>
+                      {pinnableEvents.filter((event) => event.status === 'published' && event.startDate >= new Date().toLocaleDateString('sv-SE') && event.type !== 'tefila').map((event) => (
+                        <option key={event.id} value={event.id}>{event.title} · {event.startDate}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {pinnedMessageType !== 'event' && <div>
                   <label className="text-sm font-bold text-slate-700">
                     Text
                   </label>
@@ -970,7 +995,7 @@ useEffect(() => {
                     placeholder="Exempel: Mazel tov familjen ..."
                     className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6"
                   />
-                </div>
+                </div>}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1023,7 +1048,7 @@ useEffect(() => {
                   type="button"
                   disabled={
                     savingPinnedMessage ||
-                    !pinnedMessageText.trim()
+                    (pinnedMessageType === 'event' ? !pinnedEventId : !pinnedMessageText.trim())
                   }
                   onClick={() => {
                     void handleSavePinnedMessage()

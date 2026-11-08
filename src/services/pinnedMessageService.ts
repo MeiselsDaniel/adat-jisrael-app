@@ -12,10 +12,12 @@ export type PinnedMessageType =
   | 'important'
   | 'fundraiser'
   | 'general'
+  | 'event'
 
 export type PinnedMessage = {
   type: PinnedMessageType
   text: string
+  eventId?: string
   startDate: string
   endDate: string
   active: boolean
