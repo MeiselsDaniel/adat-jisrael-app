@@ -2,6 +2,8 @@ import {
   Heart,
   HeartHandshake,
   ChevronRight,
+  CalendarDays,
+  CheckCircle2,
 } from 'lucide-react'
 import {
   useEffect,
@@ -33,8 +35,14 @@ import {
 } from '../services/tefilaService'
 import {
   subscribeToEventsBetween,
+  getEvent,
   type StoredAppEvent,
 } from '../services/eventService'
+import {
+  subscribeToUserEventRegistration,
+  subscribeToEventRegistrations,
+  type StoredEventRegistration,
+} from '../services/eventRegistrationService'
 import ProgramCardView from '../components/ProgramCardView'
 import { buildProgramCardData } from '../utils/buildProgramCardData'
 import type { Tefila } from '../types'
@@ -183,6 +191,87 @@ function HomePage({
 
 const [pinnedMessage, setPinnedMessage] =
   useState<PinnedMessage | null>(null)
+
+const [featuredEvent, setFeaturedEvent] =
+  useState<StoredAppEvent | null>(null)
+
+const [featuredRegistration, setFeaturedRegistration] =
+  useState<StoredEventRegistration | null>(null)
+
+const [featuredExpanded, setFeaturedExpanded] =
+  useState(false)
+
+const [featuredRegistrations, setFeaturedRegistrations] =
+  useState<StoredEventRegistration[]>([])
+
+const [featuredRegistrationLoaded, setFeaturedRegistrationLoaded] =
+  useState(false)
+
+const [featuredParticipantsLoaded, setFeaturedParticipantsLoaded] =
+  useState(false)
+
+useEffect(() => {
+  setFeaturedRegistrations([])
+  setFeaturedParticipantsLoaded(false)
+
+  if (!featuredEvent?.id || !featuredEvent.allowRegistration) {
+    return
+  }
+
+  return subscribeToEventRegistrations(
+    featuredEvent.id,
+    (registrations) => {
+      setFeaturedRegistrations(registrations)
+      setFeaturedParticipantsLoaded(true)
+    },
+    console.error,
+  )
+}, [featuredEvent?.id, featuredEvent?.allowRegistration])
+
+useEffect(() => {
+  if (
+    pinnedMessage?.type !== 'event' ||
+    !pinnedMessage.eventId ||
+    !pinnedMessage.active
+  ) {
+    setFeaturedEvent(null)
+    return
+  }
+
+  let active = true
+  setFeaturedEvent(null)
+
+  getEvent(pinnedMessage.eventId)
+    .then((event) => {
+      if (active) setFeaturedEvent(event)
+    })
+    .catch(console.error)
+
+  return () => {
+    active = false
+  }
+}, [
+  pinnedMessage?.type,
+  pinnedMessage?.eventId,
+  pinnedMessage?.active,
+])
+
+useEffect(() => {
+  setFeaturedRegistration(null)
+  setFeaturedRegistrationLoaded(false)
+
+  if (!featuredEvent?.id || !userId) return
+
+  return subscribeToUserEventRegistration(
+    featuredEvent.id,
+    userId,
+    (registration) => {
+      setFeaturedRegistration(registration)
+      setFeaturedRegistrationLoaded(true)
+    },
+    console.error,
+  )
+}, [featuredEvent?.id, userId])
 
 useEffect(() => {
   return subscribeToPinnedMessage(
@@ -545,7 +634,8 @@ useEffect(() => {
       {pinnedMessage &&
         pinnedMessage.active &&
         formatDateValue(now) >= pinnedMessage.startDate &&
-        formatDateValue(now) <= pinnedMessage.endDate && (
+        formatDateValue(now) <= pinnedMessage.endDate &&
+        pinnedMessage.type !== 'event' && (
           <section className="rounded-3xl bg-amber-50 px-5 py-3 shadow-sm ring-1 ring-amber-200">
             <div className="flex items-start">
 
@@ -571,6 +661,93 @@ useEffect(() => {
                 </p>
               </div>
             </div>
+          </section>
+        )}
+
+      {pinnedMessage?.active &&
+        pinnedMessage.type === 'event' &&
+        formatDateValue(now) >= pinnedMessage.startDate &&
+        featuredEvent &&
+        featuredEvent.id === pinnedMessage.eventId &&
+        featuredEvent.status === 'published' &&
+        (
+          featuredEvent.startDate > formatDateValue(now) ||
+          (
+            featuredEvent.startDate === formatDateValue(now) &&
+            (
+              !featuredEvent.endTime ||
+              featuredEvent.endTime >
+                `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+            )
+          )
+        ) && (
+          <section className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setFeaturedExpanded(!featuredExpanded)}
+              aria-expanded={featuredExpanded}
+              className="w-full rounded-3xl bg-amber-50 px-5 py-4 text-left shadow-sm ring-1 ring-amber-200 transition hover:bg-amber-100"
+            >
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-amber-800">
+                <CalendarDays className="h-4 w-4" />
+                Kommande evenemang
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-slate-800">
+                    {featuredEvent.title}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {new Intl.DateTimeFormat('sv-SE', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                    }).format(
+                      new Date(`${featuredEvent.startDate}T12:00:00`)
+                    )}
+                    {featuredEvent.startTime &&
+                      ` · ${featuredEvent.startTime}`}
+                  </p>
+                </div>
+                <ChevronRight
+                  className={`h-5 w-5 shrink-0 text-amber-800 transition-transform ${
+                    featuredExpanded ? 'rotate-90' : ''
+                  }`}
+                />
+              </div>
+
+              {featuredEvent.allowRegistration && (
+                <div className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#183b70]">
+                  {!featuredRegistrationLoaded ||
+                  !featuredParticipantsLoaded ? (
+                    'Kontrollerar anmälan …'
+                  ) : featuredRegistration ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Du är anmäld
+                    </>
+                  ) : featuredEvent.registrationDeadline &&
+                    featuredEvent.registrationDeadline <
+                      formatDateValue(now) ? (
+                    'Anmälan är stängd'
+                  ) : featuredEvent.maxParticipants !== undefined &&
+                    featuredRegistrations.reduce(
+                      (sum, registration) =>
+                        sum + (registration.partySize ?? 0),
+                      0,
+                    ) >= featuredEvent.maxParticipants ? (
+                    'Fullbokat'
+                  ) : (
+                    'Anmäl dig'
+                  )}
+                </div>
+              )}
+            </button>
+
+            {featuredExpanded && (
+              <RichEventCard event={featuredEvent} />
+            )}
           </section>
         )}
 

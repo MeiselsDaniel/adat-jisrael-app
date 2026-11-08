@@ -469,8 +469,7 @@ function NewEventPage({
 
         if (
           (eventType === 'activity' || eventType === 'shiur') &&
-          publishAsNews &&
-          !initialEvent
+          publishAsNews
         ) {
           const date = new Date(
             `${newEvent.startDate}T12:00:00`,
@@ -1027,10 +1026,13 @@ function NewEventPage({
             </>
           )}
 
-          {(eventType === 'activity' || eventType === 'shiur') &&
-            !initialEvent && (
+          {(eventType === 'activity' || eventType === 'shiur') && (
               <Toggle
-                label="Publicera även som nyhet"
+                label={
+                  initialEvent
+                    ? "Publicera som nyhet nu"
+                    : "Publicera även som nyhet"
+                }
                 description="Skapar automatiskt en publicerad nyhet med aktivitetens titel, datum och information."
                 checked={publishAsNews}
                 onChange={setPublishAsNews}
