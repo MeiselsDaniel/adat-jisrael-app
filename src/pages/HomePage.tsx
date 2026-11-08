@@ -33,6 +33,7 @@ import {
 } from '../services/tefilaService'
 import {
   subscribeToEventsBetween,
+  getEvent,
   type StoredAppEvent,
 } from '../services/eventService'
 import ProgramCardView from '../components/ProgramCardView'
@@ -46,6 +47,7 @@ import {
   subscribeToAllJahrzeits,
   type JahrzeitRecord,
 } from '../services/jahrzeitService'
+import { subscribeToUserEventRegistration } from '../services/eventRegistrationService'
 import {
   subscribeToPinnedMessage,
   type PinnedMessage,
@@ -183,6 +185,29 @@ function HomePage({
 
 const [pinnedMessage, setPinnedMessage] =
   useState<PinnedMessage | null>(null)
+
+const [featuredEvent, setFeaturedEvent] = useState<StoredAppEvent | null>(null)
+const [featuredRegistered, setFeaturedRegistered] = useState(false)
+
+useEffect(() => {
+  if (pinnedMessage?.type !== 'event' || !pinnedMessage.eventId) {
+    setFeaturedEvent(null)
+    return
+  }
+  let alive = true
+  getEvent(pinnedMessage.eventId).then((event) => {
+    if (alive) setFeaturedEvent(event)
+  }).catch((error) => console.error('Kunde inte läsa fäst evenemang:', error))
+  return () => { alive = false }
+}, [pinnedMessage?.type, pinnedMessage?.eventId])
+
+useEffect(() => {
+  setFeaturedRegistered(false)
+  if (pinnedMessage?.type !== 'event' || !pinnedMessage.eventId || !userId) return
+  return subscribeToUserEventRegistration(pinnedMessage.eventId, userId, (registration) => {
+    setFeaturedRegistered(Boolean(registration))
+  })
+}, [pinnedMessage?.type, pinnedMessage?.eventId, userId])
 
 useEffect(() => {
   return subscribeToPinnedMessage(
@@ -545,12 +570,22 @@ useEffect(() => {
       {pinnedMessage &&
         pinnedMessage.active &&
         formatDateValue(now) >= pinnedMessage.startDate &&
-        formatDateValue(now) <= pinnedMessage.endDate && (
+        formatDateValue(now) <= pinnedMessage.endDate &&
+        (pinnedMessage.type !== 'event' || (featuredEvent?.status === 'published' && featuredEvent.startDate >= formatDateValue(now))) && (
           <section className="rounded-3xl bg-amber-50 px-5 py-3 shadow-sm ring-1 ring-amber-200">
             <div className="flex items-start">
 
               <div className="min-w-0 flex-1">
-                {pinnedMessage.type !== 'general' && (
+                {pinnedMessage.type === 'event' && featuredEvent ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-800">Kommande evenemang</p>
+                    <h2 className="text-lg font-bold text-slate-900">{featuredEvent.title}</h2>
+                    <p className="text-sm text-slate-700">{featuredEvent.startDate} · {featuredEvent.startTime}{featuredEvent.location ? ` · ${featuredEvent.location}` : ''}</p>
+                    {featuredRegistered && <p className="text-sm font-bold text-green-800">✓ Du är anmäld</p>}
+                    <a href={`/event/${featuredEvent.id}`} className="inline-flex rounded-xl bg-[#183b70] px-4 py-2 text-sm font-bold text-white">{featuredRegistered ? 'Visa evenemang' : featuredEvent.allowRegistration ? 'Anmäl dig' : 'Visa evenemang'}</a>
+                  </div>
+                ) : null}
+                {pinnedMessage.type !== 'general' && pinnedMessage.type !== 'event' && (
                   <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
                     {pinnedMessage.type === 'mazelTov'
                       ? 'Mazel tov! 🎉'
@@ -562,13 +597,13 @@ useEffect(() => {
                   </p>
                 )}
 
-                <p
+                {pinnedMessage.type !== 'event' && <p
                   className={`whitespace-pre-line text-base font-semibold leading-7 text-slate-800 ${
                     pinnedMessage.type !== 'general' ? 'mt-2' : ''
                   }`}
                 >
                   {pinnedMessage.text}
-                </p>
+                </p>}
               </div>
             </div>
           </section>
