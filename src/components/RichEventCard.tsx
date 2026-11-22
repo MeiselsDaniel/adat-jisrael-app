@@ -32,10 +32,12 @@ import {
 
 type RichEventCardProps = {
   event: StoredAppEvent
+  autoOpenRegistration?: boolean
 }
 
 function RichEventCard({
   event,
+  autoOpenRegistration = false,
 }: RichEventCardProps) {
   const {
     firebaseUser,
@@ -488,6 +490,14 @@ function RichEventCard({
     setRegistrationOpen(true)
     setOpen(true)
   }
+
+  useEffect(() => {
+    if (autoOpenRegistration && event.allowRegistration) {
+      openRegistration()
+    }
+    // Öppnas en gång när inbjudningskortet visas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenRegistration, event.id])
 
   function changePartySize(
     nextSize: number,

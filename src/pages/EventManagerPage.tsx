@@ -1,3 +1,4 @@
+import EventInvitePanel from '../components/EventInvitePanel'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft,
@@ -934,6 +935,11 @@ function EventAdminCard({
           {registrationsOpen && (
             <div className="mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <div className="border-b border-slate-100 p-3">
+                <EventInvitePanel
+                  event={event}
+                  registrations={registrations}
+                />
+
                 {!addParticipantOpen ? (
                   <button
                     type="button"

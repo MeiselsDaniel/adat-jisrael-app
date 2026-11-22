@@ -14,6 +14,7 @@ import { getMembershipApplication } from '../services/membershipApplicationServi
 import LiveMinyanCard from '../components/LiveMinyanCard'
 import RichEventCard from '../components/RichEventCard'
 import TefilaInvitationCards from '../components/TefilaInvitationCards'
+import EventInvitationCards from '../components/EventInvitationCards'
 import { synagogueSettings } from '../data/settings'
 import { getHebcalDayInfo } from '../services/hebcalService'
 import {
@@ -781,6 +782,7 @@ useEffect(() => {
       </section>
 
       <TefilaInvitationCards />
+      <EventInvitationCards />
 
       <section className="space-y-3 [&>*:nth-child(n+15)]:hidden">
         {itemsBeforeShabbat.map((item) =>
