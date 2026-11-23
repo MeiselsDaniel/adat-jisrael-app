@@ -422,6 +422,29 @@ function LiveMinyanCard({
       .toLowerCase()
       .includes('shacharit')
 
+  const canShareShacharit =
+    (profile?.role === 'admin' || profile?.role === 'gabbai') &&
+    isStandardShacharit &&
+    registrationAllowed &&
+    record?.status !== 'cancelled' &&
+    record?.status !== 'completed'
+
+  const shareShacharitToWhatsApp = () => {
+    const dateLabel = displayedTefila.dateValue
+      ? new Intl.DateTimeFormat('sv-SE', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        }).format(new Date(`${displayedTefila.dateValue}T12:00:00`))
+      : ''
+    const heading = `🕍 Shacharit${dateLabel ? ` – ${dateLabel}` : ''}`
+    const status = peopleNeeded === 0
+      ? `Vi är ${attendance} anmälda – vi har minjan!`
+      : `Vi är ${attendance} anmälda och behöver ${peopleNeeded === 1 ? 'bara en till' : `${peopleNeeded} till`} för minjan!`
+    const message = `${heading}\\n\\n${status}\\n\\n📱 Anmäl dig i Adat Jisrael-appen!`
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
+  }
+
   const hideStandardShacharitInAdmin =
     showAdminControls &&
     isStandardShacharit &&
@@ -499,6 +522,16 @@ loading={loading}
       onConfirm={saveMinyanResult}
       onResetResult={resetSavedMinyanResult}
     />
+
+      {canShareShacharit && (
+        <button
+          type="button"
+          onClick={shareShacharitToWhatsApp}
+          className="mt-2 w-full rounded-xl bg-green-700 px-4 py-3 text-sm font-bold text-white"
+        >
+          Dela Shacharit på WhatsApp
+        </button>
+      )}
 
       {profile?.role === 'admin' &&
         showAdminControls &&
